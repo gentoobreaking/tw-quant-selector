@@ -3,14 +3,18 @@
 .page h2 { font-size: 1.1rem; margin-bottom: 12px; }
 .page h3 { font-size: 0.95rem; margin-bottom: 8px; color: var(--text-secondary); }
 .loading { color: var(--text-muted); padding: 32px; text-align: center; }
+.empty { color: var(--text-muted); padding: 32px; text-align: center; font-size: 0.9rem; }
 .section { margin-bottom: 24px; }
 .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
 .tab { padding: 8px 16px; border: 1px solid var(--bg-border); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
 .tab.active { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
 .chartBox { margin-bottom: 20px; padding: 12px; background: var(--bg-surface); border-radius: var(--radius-card); }
-.corrTable { border-collapse: collapse; font-size: 0.85rem; }
-.corrTable th, .corrTable td { padding: 6px 10px; text-align: center; border: 1px solid var(--bg-border); }
+.corrContainer { overflow-x: auto; }
+.corrTable { border-collapse: collapse; font-size: 1.05rem; }
+.corrTable th, .corrTable td { padding: 14px 18px; text-align: center; border: 1px solid var(--bg-border); min-width: 72px; }
 .corrTable th { font-weight: 600; background: var(--bg-surface); position: sticky; top: 0; }
+.corrTable td:first-child { font-weight: 600; background: var(--bg-surface); text-align: left; padding-right: 24px; }
+.corrDesc { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px; line-height: 1.6; max-width: 640px; }
 .instCtrl { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
 .instCtrl select { padding: 6px 10px; border: 1px solid var(--bg-border); border-radius: var(--radius-card); background: var(--bg-surface); color: var(--text-primary); }
 .btn { padding: 6px 14px; background: var(--color-accent); color: #fff; border: none; border-radius: var(--radius-card); cursor: pointer; font-size: 0.85rem; }

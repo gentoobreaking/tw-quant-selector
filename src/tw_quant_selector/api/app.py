@@ -2032,11 +2032,19 @@ WHERE s.signal_date >= CURRENT_DATE - (:1 * INTERVAL '1 DAY')
 
 @app.get("/api/v1/factor/quintile-returns")
 def factor_quintile_returns(days: int = 730):
+    # Compute T+20 close from daily_prices independently, then join to signals.
+    # LEAD(X, 20) over signal_date doesn't work when signals are sparse — instead
+    # we find the close 20 trading days ahead in daily_prices for each (stock_id, date).
     rows = db.execute(
-        """SELECT s.signal_date, s.strategy, s.score, dp.close AS cur_close,
-                  LEAD(dp.close, 20) OVER (PARTITION BY s.stock_id, s.strategy ORDER BY s.signal_date) AS fut_close
+        """WITH fut AS (
+               SELECT stock_id, trade_date,
+                      LEAD(close, 20) OVER (PARTITION BY stock_id ORDER BY trade_date) AS fut_close
+               FROM daily_prices
+           )
+           SELECT s.signal_date, s.strategy, s.score, dp.close AS cur_close, f.fut_close
            FROM signals s
            JOIN daily_prices dp ON dp.stock_id = s.stock_id AND dp.trade_date = s.signal_date
+           JOIN fut f ON f.stock_id = s.stock_id AND f.trade_date = s.signal_date
            WHERE s.signal_date >= CURRENT_DATE - (:1 * INTERVAL '1 DAY')""",
         [days]
     ).fetchall()

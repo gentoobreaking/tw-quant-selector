@@ -1,205 +1,212 @@
+#!/usr/bin/env python3
+"""Backfill daily_prices for a date range using TWSE per-stock STOCK_DAY API.
+
+TWSE STOCK_DAY_ALL (openapi) only returns the latest day. This script uses
+www.twse.com.tw per-stock endpoint for specific months.
+
+Endpoint: GET https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=YYYYMMDD&stockNo=CODE
+
+The date=YYYYMMDD parameter selects the MONTH view — the API returns all trading
+days in that month. We parse out only the days we need.
 """
-一次性歷史股價回補：用 FinMind 為所有（或指定）股票拉 N 天日線。
-
-－ 不刪除既有 TWSE 資料
-－ 直接用 FinMind client + _upsert，繞過 _filter_stocks_needing_update
-
-用法：
-  FINMIND_TOKEN=xxx python scripts/backfill_daily_prices.py
-
-可選參數：
-  --lookback-days 252    回溯天數（預設 252）
-  --batch-size 10        每批幾檔（FinMind free tier 5/min，建議 5~10）
-  --wait-seconds 180     批次間等待秒數（預設 180 秒 = 3 分鐘）
-  --stock-ids "2330,0050" 只補指定股票
-  --skip-existing        已存在 >= lookback_days 天資料的 stock 跳過
-  --resume               從上次中斷處續跑（讀取 ./backfill_progress.json）
-"""
-
-import argparse
-import json
-import math
-import os
 import sys
+import os
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import numpy as np
-import pandas as pd
+import httpx
+import structlog
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from tw_quant_selector.data.database import Database
-from tw_quant_selector.data.finmind_client import FinMindClient, FinMindRateLimitError
-from tw_quant_selector.data.ingestion import _upsert, _clean_nan
 
-# FinMind → DB column mapping
-FINMIND_COLS = {
-    "stock_id": "stock_id",
-    "date": "trade_date",
-    "open": "open",
-    "max": "high",
-    "min": "low",
-    "close": "close",
-    "Trading_Volume": "volume",
-    "Trading_money": "amount",
-}
+structlog.configure(
+    wrapper_class=structlog.make_filtering_bound_logger(20),
+)
 
-PROGRESS_FILE = Path(__file__).resolve().parent.parent / ".backfill_progress.json"
+TWSE_WEB = "https://www.twse.com.tw"
+MAX_WORKERS = 8
+BATCH_REPORT_EVERY = 200
 
-parser = argparse.ArgumentParser(description="一次性回補歷史股價")
-parser.add_argument("--lookback-days", type=int, default=252, help="回溯天數（預設 252）")
-parser.add_argument("--batch-size", type=int, default=10, help="每批處理檔數")
-parser.add_argument("--wait-seconds", type=int, default=180, help="批次間等待秒數")
-parser.add_argument("--stock-ids", type=str, help="逗號分隔的股票代號（不給則全部）")
-parser.add_argument("--skip-existing", action="store_true",
-                    help=f"已有 >= --lookback-days 天日線的 stock 跳過")
-parser.add_argument("--resume", action="store_true", help="從上次中斷處續跑")
-parser.add_argument("token", nargs="?", help="FinMind API token（或用 FINMIND_TOKEN env）")
-args = parser.parse_args()
+log = structlog.get_logger()
 
-token = args.token or os.environ.get("FINMIND_TOKEN", "")
-if not token:
-    parser.print_help()
-    sys.exit(1)
 
-db = Database()
-client = FinMindClient(token)
+def _safe_float(v) -> float | None:
+    if v is None or v == "":
+        return None
+    try:
+        # Remove commas and +/- prefix
+        s = str(v).replace(",", "").replace("+", "").replace("X", "")
+        return float(s)
+    except (ValueError, TypeError):
+        return None
 
-end_date = date.today()
-start_date = end_date - timedelta(days=args.lookback_days)
 
-print(f"📅 回補範圍: {start_date} ~ {end_date} ({args.lookback_days} 天)")
-print(f"📦 每批: {args.batch_size} 檔, 間隔: {args.wait_seconds}s")
+def _safe_int(v) -> int | None:
+    if v is None or v == "":
+        return None
+    try:
+        return int(str(v).replace(",", ""))
+    except (ValueError, TypeError):
+        return None
 
-# ── Determine stock list ──
-if args.stock_ids:
-    all_ids = [s.strip() for s in args.stock_ids.split(",") if s.strip()]
-    print(f"🎯 指定標的: {len(all_ids)} 檔")
-else:
-    with db.connection() as conn:
-        rows = conn.execute("SELECT stock_id FROM stocks ORDER BY stock_id").fetchall()
-    all_ids = [r[0] for r in rows]
-    print(f"📋 全部標的: {len(all_ids)} 檔")
 
-# ── Resume support ──
-completed: set[str] = set()
-failed_sids: set[str] = set()
-if args.resume and PROGRESS_FILE.exists():
-    state = json.loads(PROGRESS_FILE.read_text())
-    completed = set(state.get("completed", []))
-    failed_sids = set(state.get("failed", []))
-    print(f"📌 續跑: {len(completed)} 已完成, {len(failed_sids)} 失敗 (會被跳過)")
-    all_ids = [s for s in all_ids if s not in completed and s not in failed_sids]
+def _roc_to_ad(roc_str: str) -> str:
+    """115/06/12 → 2026-06-12"""
+    parts = roc_str.split("/")
+    year = int(parts[0]) + 1911
+    return f"{year:04d}-{parts[1]}-{parts[2]}"
 
-if args.skip_existing:
-    # 查哪些 stock 的 daily_prices 已經夠多天
-    with db.connection() as conn:
-        rows = conn.execute("""
-            SELECT stock_id, COUNT(*) as cnt
-            FROM daily_prices
-            WHERE trade_date >= :start AND stock_id = ANY(:ids)
-            GROUP BY stock_id
-        """, {"start": start_date, "ids": all_ids}).fetchall()
-    skip_set = {r[0] for r in rows if r[1] >= args.lookback_days * 0.8}
-    skipped = [s for s in all_ids if s in skip_set]
-    all_ids = [s for s in all_ids if s not in skip_set]
-    print(f"⏭ 跳過 {len(skipped)} 檔（已有 >= {int(args.lookback_days * 0.8)} 天）")
 
-# ── Filter FinMind-valid IDs ──
-import re
-_finmind_re = re.compile(r"^\d{4}$|^00\d{3,4}$|^\d{5}[A-Z]?$|^\d{4}[A-Z]\d{0,2}$|^\d{6}[A-Z]?$")
-valid_ids = [s for s in all_ids if _finmind_re.match(s)]
-invalid = len(all_ids) - len(valid_ids)
-if invalid:
-    print(f"⚠️ 跳過 {invalid} 個非 FinMind 格式 ID")
+def fetch_twse_stock_month(stock_id: str, query_month: str) -> dict[str, dict] | None:
+    """Fetch a single stock's entire month of OHLCV from TWSE.
 
-if not valid_ids:
-    print("✅ 沒有需要回補的 stock")
-    db.close()
-    sys.exit(0)
+    query_month: YYYYMMDD (only YYYYMM matters — TWSE returns the whole month)
 
-batches = [valid_ids[i:i + args.batch_size] for i in range(0, len(valid_ids), args.batch_size)]
-total_batches = len(batches)
+    Returns dict mapping trade_date (YYYY-MM-DD) → OHLCV dict, or None on failure.
+    """
+    url = f"{TWSE_WEB}/exchangeReport/STOCK_DAY"
+    params = {"response": "json", "date": query_month, "stockNo": stock_id}
+    try:
+        resp = httpx.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("stat") != "OK" or not data.get("data"):
+            return None
 
-print(f"\n🚀 開始回補 ({len(valid_ids)} 檔, {total_batches} 批)")
-print("=" * 60)
+        results = {}
+        for row in data["data"]:
+            # row: [日期, 成交股數, 成交金額, 開盤價, 最高價, 最低價, 收盤價, 漲跌價差, 成交筆數]
+            roc_date = row[0]
+            trade_date = _roc_to_ad(roc_date)
+            results[trade_date] = {
+                "stock_id": stock_id,
+                "trade_date": trade_date,
+                "open": _safe_float(row[3]),
+                "high": _safe_float(row[4]),
+                "low": _safe_float(row[5]),
+                "close": _safe_float(row[6]),
+                "volume": _safe_int(row[1]),
+                "amount": _safe_int(row[2].replace(",", "")),
+            }
+        return results
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            return None
+        log.warning("twse.fetch_error", stock_id=stock_id, month=query_month, status=e.response.status_code)
+        return None
+    except Exception as e:
+        log.warning("twse.fetch_error", stock_id=stock_id, month=query_month, error=str(e))
+        return None
 
-total_rows = 0
 
-for batch_idx, batch in enumerate(batches, 1):
-    preview = ", ".join(batch[:5]) + ("..." if len(batch) > 5 else "")
-    print(f"\n📥 批次 {batch_idx}/{total_batches} ({len(batch)} 檔): {preview}")
-
+def upsert_prices(db: Database, rows: list[dict]) -> int:
+    """Batch upsert into daily_prices. Returns rows written."""
+    if not rows:
+        return 0
     n = 0
-    rate_limit_hits = 0
-    MAX_RATE_LIMIT_RETRIES = 5
+    for r in rows:
+        try:
+            with db.connection() as conn:
+                existing = conn.execute(
+                    "SELECT 1 FROM daily_prices WHERE stock_id = ? AND trade_date = ?",
+                    [r["stock_id"], r["trade_date"]],
+                ).fetchone()
+                if existing:
+                    conn.execute(
+                        "UPDATE daily_prices SET open=?, high=?, low=?, close=?, volume=?, amount=? "
+                        "WHERE stock_id=? AND trade_date=?",
+                        [r["open"], r["high"], r["low"], r["close"], r["volume"], r["amount"],
+                         r["stock_id"], r["trade_date"]],
+                    )
+                else:
+                    conn.execute(
+                        "INSERT INTO daily_prices (stock_id, trade_date, open, high, low, close, volume, amount) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        [r["stock_id"], r["trade_date"], r["open"], r["high"], r["low"], r["close"], r["volume"], r["amount"]],
+                    )
+                conn.commit()
+            n += 1
+        except Exception as e:
+            log.warning("upsert_error", stock_id=r["stock_id"], date=r["trade_date"], error=str(e))
+    return n
 
-    for sid in batch:
-        done = False
-        while not done:
-            try:
-                raw = client.get_daily_prices(sid, start_date, end_date)
-                if not raw:
-                    completed.add(sid)
-                    done = True
-                    continue
-                rows = [{FINMIND_COLS.get(k, k): _clean_nan(v)
-                         for k, v in r.items() if k in FINMIND_COLS}
-                        for r in raw]
-                if not rows:
-                    completed.add(sid)
-                    done = True
-                    continue
-                with db.connection() as conn:
-                    _upsert(conn, "daily_prices", rows, ["stock_id", "trade_date"])
-                    conn.commit()
-                n += len(rows)
-                completed.add(sid)
-                done = True
-            except FinMindRateLimitError as e:
-                rate_limit_hits += 1
-                print(f"   🛑 {sid} 限流 ({rate_limit_hits}/{MAX_RATE_LIMIT_RETRIES}): {e}")
-                if rate_limit_hits >= MAX_RATE_LIMIT_RETRIES:
-                    print(f"   已達最大重試次數，存進度並退出")
-                    PROGRESS_FILE.write_text(json.dumps({
-                        "completed": sorted(completed), "failed": sorted(failed_sids),
-                        "last_batch": batch_idx, "total_batches": total_batches,
-                    }, ensure_ascii=False, indent=2))
-                    print(f"   進度檔: {PROGRESS_FILE}（--resume 續跑）")
-                    db.close()
-                    sys.exit(75)
-                wait_min = 60
-                print(f"   ⏳ 自動等待 {wait_min} 分鐘後重試...")
-                time.sleep(wait_min * 60)
-                # 繼續 while loop，重試同一個 sid
-            except Exception as e:
-                print(f"   ⚠️ {sid} 失敗: {e}")
-                failed_sids.add(sid)
-                done = True
 
-    print(f"   ✅ {n:>7} 行寫入")
-    total_rows += n
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Backfill daily_prices for date range via TWSE per-stock API")
+    parser.add_argument("--start", default="2026-06-08", help="Start (YYYY-MM-DD)")
+    parser.add_argument("--end", default="2026-06-12", help="End (YYYY-MM-DD)")
+    parser.add_argument("--stocks", default=None, help="Comma-separated stock IDs (default: all stocks in DB)")
+    parser.add_argument("--workers", type=int, default=MAX_WORKERS, help="Concurrent workers")
+    args = parser.parse_args()
 
-    # 存進度
-    PROGRESS_FILE.write_text(json.dumps({
-        "completed": sorted(completed), "failed": sorted(failed_sids),
-        "last_batch": batch_idx, "total_batches": total_batches,
-    }, ensure_ascii=False, indent=2))
+    db = Database()
+    db.init_db()
 
-    if batch_idx < total_batches:
-        print(f"   ⏳ 等待 {args.wait_seconds}s 避免限流...")
-        time.sleep(args.wait_seconds)
+    start = date.fromisoformat(args.start)
+    end = date.fromisoformat(args.end)
 
-# Cleanup
-if PROGRESS_FILE.exists():
-    PROGRESS_FILE.unlink()
+    # Get stock list
+    if args.stocks:
+        stock_ids = [s.strip() for s in args.stocks.split(",") if s.strip()]
+    else:
+        rows = db.execute("SELECT stock_id FROM stocks ORDER BY stock_id").fetchall()
+        stock_ids = [r[0] for r in rows]
+    print(f"📋 {len(stock_ids)} stocks to fetch")
 
-print(f"\n{'='*60}")
-print(f"✅ 回補完成: {total_rows} 行")
-if failed_sids:
-    print(f"⚠️ {len(failed_sids)} 檔失敗: {', '.join(sorted(failed_sids)[:10])}...")
-print(f"已完成: {len(completed)} 檔")
+    # We need all trading days in the range
+    dates_needed = set()
+    d = start
+    while d <= end:
+        dates_needed.add(d.isoformat())
+        d += timedelta(days=1)
+    print(f"📅 Need prices for {len(dates_needed)} dates: {start} ~ {end}")
 
-db.close()
+    # Determine which months to query (TWSE API returns monthly data)
+    months = sorted({(start.year, start.month), (end.year, end.month)})
+    month_strs = [f"{y:04d}{m:02d}01" for y, m in months]
+    print(f"📆 Will query {len(month_strs)} month(s): {month_strs}")
+
+    # Fetch: for each month, fetch all stocks. Each stock returns the whole month.
+    total_rows = []
+    total_fetched = 0
+
+    for month_str in month_strs:
+        print(f"\n{'─'*50}")
+        print(f"🔄 Querying {month_str} ...")
+
+        month_data: dict[str, list[dict]] = {}  # date → rows
+
+        with ThreadPoolExecutor(max_workers=args.workers) as pool:
+            futures = {pool.submit(fetch_twse_stock_month, sid, month_str): sid for sid in stock_ids}
+            done = 0
+            for fut in as_completed(futures):
+                done += 1
+                result = fut.result()
+                if result:
+                    for trade_date, row in result.items():
+                        if trade_date in dates_needed:
+                            month_data.setdefault(trade_date, []).append(row)
+                if done % BATCH_REPORT_EVERY == 0:
+                    print(f"  ... {done}/{len(stock_ids)} stocks done")
+
+        # Upsert date by date
+        print(f"\n  💾 Upserting...")
+        for trade_date in sorted(month_data.keys()):
+            rows = month_data[trade_date]
+            n = upsert_prices(db, rows)
+            total_rows.extend(rows)
+            total_fetched += n
+            print(f"     {trade_date}: {n} rows")
+
+    print(f"\n{'='*60}")
+    print(f"🏁 Done — {total_fetched} total rows upserted across {len(month_strs)} month(s)")
+    print(f"{'='*60}")
+    db.close()
+
+
+if __name__ == "__main__":
+    main()
