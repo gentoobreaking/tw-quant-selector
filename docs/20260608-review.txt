@@ -1,0 +1,95 @@
+## Goal
+完成台股篩選器純前端頁面，從 FinMind + TWSE OpenAPI 拉資料，支援 7 項滑桿篩選條件與 5 年詳細分析；並在 FastAPI 後端補上真實年報酬（CAGR）資料。
+
+## Constraints & Preferences
+- 使用 FinMind API 抓日股價（`TaiwanStockPrice`）、財報（`TaiwanStockFinancialStatements`）、資產負債表（`TaiwanStockBalanceSheet`）、股利（`TaiwanStockDividend`）
+- TWSE 使用 `BWIBBU_ALL`（PE/Yield/PB）與 `STOCK_DAY_ALL` CSV 端點
+- **`openapi.twse.com.tw` 無 CORS header**，僅 `www.twse.com.tw` CSV 端點有 `Access-Control-Allow-Origin: *`
+- Yahoo Finance chart API **無 CORS header**，無法從 browser 直接 fetch → 需透過 FastAPI 後端代理
+- FinMind 免費 token 每小時 600 次限額，`TaiwanStockHoldingSharesPer` 需付費等級才能存取
+- `python:3.12-slim` 的 `libcurl`/`openssl` 版本與 Yahoo Finance 不相容（`curl: (35) TLS connect error`）
+- 篩選條件保留 7 項：收盤價、殖利率、年報酬(1年)、填息天數、EPS、本益比、ROE
+
+## Progress
+### Done
+- `frontend/public/twse-screener.html`：全新靜態 HTML 篩選器
+  - 載入 `TaiwanStockInfo`（4136 檔）+ `STOCK_DAY_ALL`（1362 檔）+ `BWIBBU_ALL`（1078 檔）+ `/api/v1/cagr`
+  - 7 支滑桿即時篩選，拖動觸發 `input` event → `applyFilters()`
+  - 表格顯示代號/名稱/收盤價/漲跌/PE/殖利率/EPS≈/ROE≈/年報酬(1年)/填息天/通過數
+  - 通過數只算有資料的欄位（null → 跳過）
+  - 排序功能：點擊欄位標題排序
+  - 搜尋框 + 類別（上市/上櫃）+ 產業下拉篩選
+  - dark mode 支援（`prefers-color-scheme: dark`）
+  - 狀態列顯示 CAGR cache 更新時間
+- `frontend/public/twse-screener-detail.html`：單股詳細分析頁
+  - 從 URL query 接收股票代碼 + 篩選門檻
+  - 抓 2021-2025 五年日股價 + EPS + 淨利 + 股東權益 + 股利
+  - 計算每年：收盤價、殖利率（股利/均價）、年報酬率、填息天數、EPS、本益比、ROE
+  - 與 screener 門檻比對，顯示通過年數
+- **CORS 修復**：`fetchDayAll()` 先試 OpenAPI JSON（catch CORS 錯誤）→ fallback CSV
+- **過濾邏輯修正**：null 值自動跳過（不 fail），預設值放寬（close≥10、yield≥0%、PE≤50、EPS≥0、ROE≥0%）
+- `frontend/src/pages/TwseScreener.tsx`：新頁面元件
+- `frontend/src/components/Sidebar.tsx`：新增 `🔍 台股篩選` 導航
+- `frontend/src/App.tsx`：lazy import + route `/twse-screener`
+- `twse-analysis.html` 加入 dark mode CSS variables
+- **CAGR 後端模組**：
+  - `src/tw_quant_selector/api/cagr.py`：從 Yahoo Finance 下載全市場 Adj Close，算 1 年 CAGR，背景執行緒 warm cache
+  - `src/tw_quant_selector/api/app.py`：`/api/v1/cagr` endpoint（回傳 `{stocks: {code: {cagr_1y, price, date}}, cached_at}`），lifespan 啟動 warm cache
+  - `pyproject.toml`：加 `yfinance>=0.2.0`
+- **FinMind 限流修復**：
+  - `finmind_client.py`：403 也觸發 retry + ban、新增 `is_banned()`/`set_banned_until()` 公開方法、`retry_after ≥ 300s` 立即拋錯
+  - `update_institutional_holdings.py`：`MAX_STOCKS_PER_RUN=200`、跳過已抓過的股票（查 DB）、每次抓前檢查 `is_banned()`
+  - `run_daily_pipeline.py`：啟動時從 `/tmp/pipeline_state.json` 恢復 ban 狀態
+- **Dockerfile TLS 修復**：加 `libssl3 libcurl4 ca-certificates` 系統套件
+
+### In Progress
+- (none)
+
+### Blocked
+- **CAGR 因 `python:3.12-slim` TLS 問題，`cagr.fetch_done stocks=0`** — Yahoo Finance 連線失敗（`curl: (35) TLS connect error`），Dockerfile 已加 TLS 套件但尚未驗證修復
+- **`TaiwanStockHoldingSharesPer` dataset 因 FinMind token 等級不足**（`Your level is register`），永遠無法存取。`holdings` dataset 會持續 retry 並卡住 scheduler
+- **填息天數在 screener 中無資料**（需逐股除息日 + 日價格分析）
+- `signals` 表僅 3 天歷史，因子研究回傳 0 筆
+- MIS API IP 仍被 WAF 封鎖
+
+## Key Decisions
+- 篩選器用 FinMind API（CORS open，免 token）作為主要資料源，TWSE BWIBBU_ALL 補 PE/Yield/PB
+- 年報酬與填息天數保留在篩選器 UI 但 screener 中無歷史資料時自動跳過篩選，詳細頁才有完整 5 年計算
+- 預設值放寬到多數股票可通過，使用者再自行拉緊
+- **年報酬改為 FastAPI 後端 `/api/v1/cagr`**：背景執行緒從 Yahoo Finance 抓 Adj Close 算 1 年 CAGR，取代 screener 原來的當日漲跌%代理值
+- **FinMind holdings dataset 改為每輪最多 200 檔**（`MAX_STOCKS_PER_RUN=200`），避免撞 600/hr 限額
+- **FinMind 403 視同 rate limit**（原只 log 不處理），觸發 ban + 拋錯中斷迴圈
+
+## Next Steps
+1. 重新 build app container 並驗證 CAGR 可正常抓取資料（需確認 `cagr.fetch_done stocks>0`）
+2. 處理 FinMind `TaiwanStockHoldingSharesPer` token 等級不足問題（升級 token 或跳過 holdings dataset）
+3. (使用者決定是否改進其他 screener 功能)
+
+## Critical Context
+- 今天 2026-06-08（週一）台股：0050 低 98.05，2330 低 2230
+- **`openapi.twse.com.tw` 無 CORS header**，browser fetch 會 fail → 需 fallback 到 `www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=open_data`（有 CORS）
+- FinMind API 支援 no-token 查詢且有 `access-control-allow-origin: *`
+- `fillD` 欄位在 screener 永遠為 null（需要每檔個別計算），filter 邏輯已改為 null → skip
+- `returnR` 在 screener 現在從 `/api/v1/cagr` 取得（1 年 CAGR），非當日漲跌
+- CAGR cache 在 app 啟動時背景 warm（約 30-60 秒），warm 完成前 API 回傳 503
+- **FinMind 400 error**: `Your level is register` — `TaiwanStockHoldingSharesPer` 需付費等級
+- **`python:3.12-slim` TLS 問題**：`yfinance` → `curl: (35) OPENSSL_internal:invalid library (0)`，Dockerfile 已加入 `libssl3 libcurl4` 待驗證
+- **`run_pipeline_with_retry.sh`**：exit 75 後重試，5min×1.5x 遞增至 1hr。重啟後會從 pipeline state 還原 ban 狀態
+
+## Relevant Files
+- `frontend/public/twse-screener.html`：主篩選器 HTML（CORS fallback `fetchDayAll()`、7 項滑桿篩選、即時 table、CAGR API 串接）
+- `frontend/public/twse-screener-detail.html`：單股 5 年詳細分析（接收 code + threshold URL params）
+- `frontend/public/twse-analysis.html`：TWSE 盤後分析儀表板（新增 dark mode 支援）
+- `frontend/src/pages/TwseScreener.tsx`：React iframe 包裝頁
+- `frontend/src/pages/TwseAnalysis.tsx`：React iframe 包裝頁
+- `frontend/src/components/Sidebar.tsx`：🔍 台股篩選 + 📊 TWSE 分析 導航
+- `frontend/src/App.tsx`：lazy import + routes
+- `frontend/vite.config.ts`：`/api` proxy → `VITE_API_TARGET`
+- `src/tw_quant_selector/api/cagr.py`：CAGR 抓取 + 記憶體 cache（Yahoo Finance Adj Close → 1 年報酬）
+- `src/tw_quant_selector/api/app.py`：`/api/v1/cagr` endpoint、lifespan 背景 warm cache
+- `src/tw_quant_selector/data/finmind_client.py`：FinMind API 客戶端（含 rate limit/banned 處理）
+- `src/tw_quant_selector/data/update_institutional_holdings.py`：法人持股更新（每輪限 200 檔、跳過已有資料）
+- `scripts/run_daily_pipeline.py`：每日 pipeline 入口（啟動時還原 banned 狀態）
+- `scripts/run_pipeline_with_retry.sh`：shell wrapper（exit 75 重試，exponential backoff）
+- `Dockerfile`：multi-stage build（node:20-alpine frontend + python:3.12-slim backend）
+- `pyproject.toml`：Python 依賴（含 `yfinance>=0.2.0`）

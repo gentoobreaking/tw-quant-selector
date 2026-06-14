@@ -1,0 +1,75 @@
+.card {
+  min-width: 180px;
+  min-height: 120px;
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  padding: var(--density-card-padding);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-1);
+}
+
+.highlight {
+  border-color: var(--color-accent);
+  background: var(--color-accent-dim);
+}
+
+.alert {
+  border-color: var(--color-bear);
+  background: var(--color-bear-dim);
+}
+
+.error {
+  opacity: 0.6;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.value {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+/* T050: 數字顏色化 */
+.text-positive { color: var(--color-positive) !important; }
+.text-negative { color: var(--color-negative) !important; }
+.text-neutral { color: var(--text-primary) !important; }
+.text-excellent { color: var(--color-excellent) !important; }
+.text-good { color: var(--color-good) !important; }
+.text-poor { color: var(--color-poor) !important; }
+.text-muted { color: var(--text-tertiary) !important; }
+.text-warning { color: var(--color-warning) !important; }
+
+.delta {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.bull { color: var(--color-bull-text); }
+.bear { color: var(--color-bear-text); }
+.neutral { color: var(--text-secondary); }
+
+/* Skeleton */
+.skelLabel, .skelValue, .skelDelta {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-tag);
+  animation: shimmer var(--dur-shimmer) infinite;
+}
+
+.skelLabel { width: 60%; height: 13px; }
+.skelValue { width: 80%; height: 32px; margin: 4px 0; }
+.skelDelta { width: 40%; height: 13px; }
+
+@keyframes shimmer {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}

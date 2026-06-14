@@ -1,0 +1,238 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap');
+@import './variables.css';
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* All numbers: IBM Plex Mono + tabular-nums */
+.font-data,
+[data-font="data"],
+td[data-type="number"],
+th[data-type="number"] {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+a { color: var(--color-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button { font-family: var(--font-ui); cursor: pointer; }
+input, select, textarea { font-family: var(--font-ui); }
+
+/* ── Route page transition ── */
+.route-page {
+  animation: routeEnter var(--dur-entrance) var(--ease-enter);
+}
+@keyframes routeEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── SVG stroke entrance (sparkline / chart) ── */
+.sparkline-path {
+  stroke-dasharray: var(--path-len);
+  stroke-dashoffset: var(--path-len);
+  animation: strokeIn var(--dur-chart) var(--ease-default) forwards;
+}
+@keyframes strokeIn {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ── Table expand animation ── */
+.expand-collapse {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height var(--dur-expand) ease-out,
+              opacity var(--dur-expand) ease-out;
+}
+.expand-collapse.open {
+  max-height: 600px;
+  opacity: 1;
+}
+
+/* ── Button state matrix ── */
+.btn-primary:active { transform: scale(0.97); }
+.btn-primary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.btn-secondary:active { transform: scale(0.97); }
+.btn-secondary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  border-right-color: transparent;
+  animation: btnSpin 0.6s linear infinite;
+  top: calc(50% - 7px);
+  left: calc(50% - 7px);
+}
+@keyframes btnSpin { to { transform: rotate(360deg); } }
+
+/* ── Input state matrix ── */
+.input-error { border-color: var(--color-negative) !important; }
+.input-error:focus { border-color: var(--color-negative) !important; box-shadow: 0 0 0 1px var(--color-negative-dim); }
+.input-disabled { opacity: 0.5; cursor: not-allowed; background: var(--bg-overlay); }
+
+/* ── Table row animations ── */
+.row-new {
+  animation: rowNew var(--dur-entrance) var(--ease-enter);
+}
+@keyframes rowNew {
+  from { opacity: 0; background: var(--color-accent-dim); }
+  to { opacity: 1; background: transparent; }
+}
+.row-exiting {
+  opacity: 0;
+  transition: opacity var(--dur-fade);
+}
+
+/* ── colorize() output classes (from utils/format) ── */
+.text-positive { color: var(--color-positive); }
+.text-negative { color: var(--color-negative); }
+.text-neutral { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-excellent { color: var(--color-positive); font-weight: 600; }
+.text-good { color: var(--color-bull-text); }
+.text-poor { color: var(--color-negative-dim); }
+.text-warning { color: var(--color-warning, #f59e0b); }
+
+/* ── KPI value update flash ── */
+@keyframes valueFlash {
+  0% { color: var(--color-accent); }
+  100% { color: var(--text-primary); }
+}
+.value-update {
+  animation: valueFlash var(--dur-animation) var(--ease-out);
+}
+
+/* ── Respect reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .route-page { animation: none; }
+  .sparkline-path { animation: none; stroke-dashoffset: 0; }
+}
+
+/* ── Print styles ── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 20mm;
+  }
+
+  html, body {
+    background: #fff !important;
+    color: #1a1a1a !important;
+    font-size: 11pt;
+  }
+
+  .no-print,
+  nav, aside, .sidebar, .navbar,
+  button, .btn, [role="tab"], .tabs,
+  .actionBtn, .resetBtn, .applyBtn,
+  .refreshBtn, .backBtn, .printBtn {
+    display: none !important;
+  }
+
+  .route-page {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .page, .panel, .card, .section {
+    background: #fff !important;
+    border-color: #ccc !important;
+    box-shadow: none !important;
+  }
+
+  .text-positive, .text-good, .text-excellent,
+  .actionBuy, [class*="bull"] {
+    color: #8b0000 !important;
+  }
+
+  .text-negative, .text-poor, .text-warning,
+  .actionSell, [class*="bear"] {
+    color: #006400 !important;
+  }
+
+  .statCard, .StatCard, [class*="statCard"] {
+    background: #f8f8f8 !important;
+    border: 1px solid #ddd !important;
+  }
+
+  table {
+    page-break-inside: auto;
+    font-size: 9pt;
+  }
+
+  thead { display: table-header-group; }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  th, td {
+    padding: 4px 6px !important;
+    border-color: #ccc !important;
+    color: #1a1a1a !important;
+  }
+
+  .stockLink {
+    color: #1a1a1a !important;
+    text-decoration: none !important;
+  }
+
+  h1, h2, h3 {
+    page-break-after: avoid;
+    color: #1a1a1a !important;
+  }
+
+  .metricsGrid {
+    page-break-inside: avoid;
+  }
+
+  .section {
+    page-break-inside: avoid;
+  }
+
+  [class*="sparkline"] svg,
+  [class*="chart"] svg {
+    background: #fff !important;
+  }
+}

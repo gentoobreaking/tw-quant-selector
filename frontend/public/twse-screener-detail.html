@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台股篩選器 - 詳細分析</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f4f3f0;--surface:#fff;--surface2:#f0efe9;--border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.15);--text:#1a1a18;--text2:#6b6b67;--text3:#9a9a95;--up:#c94a1a;--up-bg:#fdf0eb;--down:#0f7a55;--down-bg:#e8f7f1;--flat:#777773;--accent:#2a5cad;--radius:10px;--radius-sm:6px}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1a1a;--surface:#252525;--surface2:#2e2e2e;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.12);--text:#e8e8e6;--text2:#9a9a97;--text3:#6b6b68;--up:#f0683a;--up-bg:#3a2015;--down:#30a87a;--down-bg:#14352a;--flat:#888885;--accent:#6a9de0}}
+body{font-family:-apple-system,'Hiragino Sans','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:200}
+.logo{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.logo span{color:var(--accent)}
+.topbar-right{font-size:13px;color:var(--text2)}
+.topbar-right a{color:var(--accent);text-decoration:none}
+.layout{max-width:1100px;margin:0 auto;padding:20px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px}
+.status-bar{display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:14px;font-size:12px;color:var(--text2)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-loading{background:#e09c18;animation:pulse 1.2s infinite}
+.dot-ok{background:var(--down)}
+.dot-err{background:var(--up)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{padding:8px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;background:var(--surface2);border-bottom:1px solid var(--border)}
+thead th:first-child{text-align:left;padding-left:14px}
+thead th:last-child{padding-right:14px}
+tbody td{padding:6px 10px;border-bottom:1px solid rgba(0,0,0,.04);text-align:center;font-variant-numeric:tabular-nums}
+tbody td:first-child{font-weight:500;color:var(--text2);padding-left:14px;text-align:left}
+tbody td:last-child{padding-right:14px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.summary-row td{font-weight:700;border-top:2px solid var(--border);background:var(--surface2)}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
+.badge-pass{background:var(--down-bg);color:var(--down)}
+.badge-fail{background:var(--up-bg);color:var(--up)}
+.badge-na{background:var(--surface2);color:var(--flat)}
+.badge-info{background:var(--surface2);color:var(--text)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">台股<span>篩選器</span> <span id="stockTitle" style="font-weight:400;font-size:13px;color:var(--text2)"></span></div>
+  <div class="topbar-right"><a href="javascript:history.back()">← 返回篩選器</a></div>
+</div>
+<div class="layout">
+  <div class="status-bar" id="statusBar">
+    <span class="dot dot-ok" id="statusDot"></span>
+    <span id="statusText">載入中...</span>
+  </div>
+  <div class="card">
+    <div class="card-title">連續 5 年符合分析</div>
+    <div class="table-wrap">
+      <table><thead id="detailHeader"></thead><tbody id="detailBody"></tbody></table>
+    </div>
+  </div>
+</div>
+<script>
+const FINMIND='https://api.finmindtrade.com/api/v4/data';
+const TWSE_BWIBBU='https://www.twse.com.tw/rwd/zh/afterTrading/BWIBBU_ALL';
+
+const CRITERIA=[
+  {id:'closePrice',label:'收盤價',dir:'gte'},
+  {id:'dividendYield',label:'殖利率',dir:'gte'},
+  {id:'returnRate',label:'報酬率',dir:'gte'},
+  {id:'fillDays',label:'填息天數',dir:'lte'},
+  {id:'eps',label:'EPS',dir:'gte'},
+  {id:'pe',label:'本益比',dir:'lte'},
+  {id:'roe',label:'ROE',dir:'gte'},
+];
+
+// Read thresholds from URL params
+function getThresholds(){
+  const p=new URLSearchParams(location.search);
+  const t={};
+  CRITERIA.forEach(c=>{
+    const v=p.get(c.id);
+    t[c.id]=v!==null?parseFloat(v):undefined;
+  });
+  return t;
+}
+
+function setStatus(msg,type){
+  document.getElementById('statusDot').className='dot dot-'+type;
+  document.getElementById('statusText').textContent=msg;
+}
+
+async function fetchFM(dataset,id,s,e){
+  const r=await fetch(`${FINMIND}?dataset=${dataset}&data_id=${id}&start_date=${s}&end_date=${e}`,{cache:'no-store'});
+  return (await r.json()).data||[];
+}
+
+async function loadDetail(){
+  const params=new URLSearchParams(location.search);
+  const code=params.get('code')||'2330';
+  const thresh=getThresholds();
+  document.getElementById('stockTitle').textContent=`${code}`;
+
+  setStatus(`正在查詢 ${code} 五年資料...`,'loading');
+  try{
+    const today='2026-06-08';
+    const currentYear=+today.slice(0,4);
+    const [prices,finStmt,eqData,divData]=await Promise.all([
+      fetchFM('TaiwanStockPrice',code,'2020-01-01',today),
+      fetchFM('TaiwanStockFinancialStatements',code,'2020-01-01',today),
+      fetchFM('TaiwanStockBalanceSheet',code,'2019-01-01',today),
+      fetchFM('TaiwanStockDividend',code,'2020-01-01',today),
+    ]);
+
+    const epsItems=finStmt.filter(e=>e.type==='EPS');
+    const niItems=finStmt.filter(e=>e.type==='IncomeAfterTaxes');
+
+    const priceMap={};prices.forEach(p=>priceMap[p.date]=p);
+    const epsByQ={};epsItems.forEach(e=>{const y=e.date.slice(0,4);if(!epsByQ[y])epsByQ[y]=[];epsByQ[y].push(e.value);});
+    const niByQ={};niItems.forEach(e=>{const y=e.date.slice(0,4);if(!niByQ[y])niByQ[y]=[];niByQ[y].push(e.value);});
+    const eqMap={};eqData.forEach(e=>{if(e.type==='EquityAttributableToOwnersOfParent')eqMap[e.date]=e.value;});
+
+    const divs=[];
+    divData.forEach(d=>{const ex=d.CashExDividendTradingDate;if(ex&&d.CashEarningsDistribution)divs.push({exDate:ex,amount:parseFloat(d.CashEarningsDistribution)});});
+
+    const years=Array.from({length:Math.max(0,currentYear-2020)},(_,i)=>String(2021+i));
+    const results={},passCount={};
+    CRITERIA.forEach(c=>passCount[c.id]=0);
+
+    years.forEach(y=>{
+      const yr=+y;
+      const startStr=`${y}-01-01`,endStr=`${y}-12-31`;
+      const yrPrices=Object.keys(priceMap).filter(d=>d>=startStr&&d<=endStr).sort();
+      const yearStart=yrPrices.length>0?priceMap[yrPrices[0]].close:null;
+      const yearEnd=yrPrices.length>0?priceMap[yrPrices[yrPrices.length-1]].close:null;
+      const yrDivs=divs.filter(d=>d.exDate>=startStr&&d.exDate<=endStr);
+      const totalDiv=yrDivs.reduce((s,d)=>s+d.amount,0);
+      const avgP=yearStart&&yearEnd?(yearStart+yearEnd)/2:null;
+      const annualEps=(epsByQ[y]||[]).reduce((s,v)=>s+v,0);
+      const annualNi=(niByQ[y]||[]).reduce((s,v)=>s+v,0);
+      const prevEq=eqMap[`${yr-1}-12-31`];
+      const thisEq=eqMap[endStr];
+      const avgEq=prevEq&&thisEq?(prevEq+thisEq)/2:thisEq||prevEq;
+
+      const fillList=[];
+      yrDivs.forEach(dd=>{
+        const idx=yrPrices.indexOf(dd.exDate);
+        if(idx<0)return;
+        const exC=priceMap[dd.exDate].close;
+        for(let i=idx+1;i<yrPrices.length;i++){if(priceMap[yrPrices[i]].close>=exC){fillList.push(i-idx);return;}}
+      });
+
+      const r={
+        closePrice:yearEnd,
+        dividendYield:avgP&&avgP>0?totalDiv/avgP*100:null,
+        returnRate:yearStart&&yearStart>0?((yearEnd-yearStart)/yearStart*100):null,
+        fillDays:fillList.length>0?fillList.reduce((a,b)=>a+b,0)/fillList.length:null,
+        eps:annualEps>0?annualEps:null,
+        pe:yearEnd&&annualEps>0?yearEnd/annualEps:null,
+        roe:annualNi&&avgEq&&avgEq>0?annualNi/avgEq*100:null,
+      };
+      results[y]=r;
+
+      CRITERIA.forEach(c=>{
+        const val=r[c.id];
+        const t=thresh[c.id];
+        if(val!==null&&!isNaN(val)&&t!==undefined){
+          if((c.dir==='gte'&&val>=t)||(c.dir==='lte'&&val<=t))passCount[c.id]++;
+        }
+      });
+    });
+
+    // Get stock name
+    let stockName='';
+    try{
+      const bw=await fetch(TWSE_BWIBBU,{cache:'no-store'});
+      const bj=await bw.json();
+      const row=(bj.data||[]).find(d=>d[0]===code);
+      if(row)stockName=row[1];
+    }catch(e){}
+    document.getElementById('stockTitle').textContent=`${code} ${stockName}`;
+
+    renderDetail(results,passCount,thresh);
+    setStatus('✓ 分析完成','ok');
+  }catch(e){
+    console.error(e);
+    setStatus(`錯誤：${e.message}`,'err');
+  }
+}
+
+function fmt(cid,val){
+  if(val===null||isNaN(val))return['-','badge-na'];
+  let s;
+  if(cid==='closePrice')s=val.toFixed(0)+'元';
+  else if(cid==='dividendYield')s=val.toFixed(2)+'%';
+  else if(cid==='returnRate')s=(val>=0?'+':'')+val.toFixed(1)+'%';
+  else if(cid==='fillDays')s=val.toFixed(0)+'天';
+  else if(cid==='eps')s=val.toFixed(2)+'元';
+  else if(cid==='pe')s=val.toFixed(2)+'倍';
+  else if(cid==='roe')s=val.toFixed(2)+'%';
+  else s=String(val);
+  return[s,'badge-info'];
+}
+
+function renderDetail(results,passCount,thresh){
+  const years=Object.keys(results).sort();
+  const thead=document.getElementById('detailHeader');
+  const hasThresh=Object.values(thresh).some(v=>v!==undefined);
+  const colLabel=c=>thresh[c.id]!==undefined?`${c.label}≥${thresh[c.id]}`:c.label;
+
+  thead.innerHTML='<th>年份</th>'+CRITERIA.map(c=>`<th>${colLabel(c)}</th>`).join('')+'<th>結果</th>';
+
+  const tbody=document.getElementById('detailBody');
+  let rows='';
+
+  years.forEach(y=>{
+    const r=results[y];
+    let yrPass=0,yrTotal=0;
+    const cells=CRITERIA.map(c=>{
+      const val=r[c.id];
+      const t=thresh[c.id];
+      let display='-',cls='badge-na';
+
+      if(val!==null&&!isNaN(val)){
+        display=fmt(c.id,val)[0];
+        if(t!==undefined){
+          const pass=(c.dir==='gte'&&val>=t)||(c.dir==='lte'&&val<=t);
+          cls=pass?'badge-pass':'badge-fail';
+          if(pass)yrPass++;
+        }else{
+          cls='badge-info';
+        }
+        yrTotal++;
+      }
+      return `<td><span class="badge ${cls}">${display}</span></td>`;
+    });
+    rows+=`<tr><td>${y}</td>${cells.join('')}<td><span class="badge ${yrPass===yrTotal?'badge-pass':'badge-fail'}">${yrPass}/${yrTotal}</span></td></tr>`;
+  });
+
+  // Summary row
+  const sumCells=CRITERIA.map(c=>{
+    const p=passCount[c.id]||0;
+    const pass=p>=5;
+    return `<td><span class="badge ${pass?'badge-pass':'badge-fail'}">${pass?'✓5年':'✗'} ${p}/5</span></td>`;
+  });
+  rows+=`<tr class="summary-row"><td>通過年數</td>${sumCells.join('')}<td></td></tr>`;
+
+  tbody.innerHTML=rows;
+}
+
+loadDetail();
+</script>
+</body>
+</html>

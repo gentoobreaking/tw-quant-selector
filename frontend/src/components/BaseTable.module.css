@@ -1,0 +1,75 @@
+/* Component tokens: override :root defaults at this scope */
+.wrapper {
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  overflow-x: auto;
+  outline: none;
+}
+
+.wrapper:focus-visible {
+  border-color: var(--color-accent);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--density-font-size);
+}
+
+.table thead { background: var(--bg-overlay); }
+
+.table th {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--bg-border);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.table th:hover { color: var(--text-primary); }
+
+.table th[data-type="number"] { text-align: right; font-family: var(--font-data); }
+.table td[data-type="number"] { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+.sortIcon { color: var(--color-accent); font-size: var(--font-size-xs); font-weight: 700; }
+.sortIconMuted { color: var(--text-muted); font-size: var(--font-size-xs); }
+
+.innerTable { width: 100%; border-collapse: collapse; }
+
+.dataRow { cursor: pointer; height: var(--density-row-height); }
+.dataRow td { padding: calc(var(--space-2) * 0.75) var(--density-cell-padding); border-bottom: 1px solid var(--bg-border); }
+.dataRow:hover td { background: var(--bg-elevated); transition: background var(--dur-hover); }
+
+.focused td {
+  border-left: 2px solid var(--color-accent);
+  background: var(--bg-elevated);
+}
+
+.selected td {
+  background: var(--color-accent-dim);
+}
+
+.selected td:first-child {
+  border-left: 2px solid var(--color-accent);
+}
+
+.groupDividerRow td { text-align: center; padding: 0; }
+.groupDivider {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  padding: var(--space-1);
+  background: var(--bg-base);
+  pointer-events: none;
+}
+
+.expandedRow td { padding: 0; }
+.inlineDetail {
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-elevated);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.dense .inlineDetail { padding: var(--space-2) var(--space-4); }

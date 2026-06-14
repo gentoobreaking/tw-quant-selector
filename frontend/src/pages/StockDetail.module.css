@@ -1,0 +1,193 @@
+.page { max-width: 1440px; }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.stockId { font-family: var(--font-data); font-size: var(--font-size-2xl); font-weight: 700; color: var(--text-primary); margin-right: var(--space-2); }
+.stockName { font-size: var(--font-size-xl); color: var(--text-primary); margin-right: var(--space-3); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-tag); font-size: var(--font-size-xs); font-weight: 600; margin-right: var(--space-2); }
+.etfBadge { background: var(--color-bull-dim); color: var(--color-bull-text); }
+.stockBadge { background: var(--color-accent-dim); color: var(--color-accent); }
+.meta { color: var(--text-muted); font-size: var(--font-size-sm); }
+
+.priceSection { text-align: right; }
+.price { font-family: var(--font-data); font-size: var(--font-size-2xl); font-weight: 700; color: var(--text-primary); }
+.change { font-family: var(--font-data); font-size: var(--font-size-lg); margin-left: var(--space-2); }
+.rtBadgeWrap { margin-top: var(--space-2); display: flex; justify-content: flex-end; }
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 2px solid var(--bg-border);
+  margin-bottom: var(--space-4);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-4);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.tab:hover { color: var(--text-primary); }
+
+.activeTab {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Factor grid */
+.factorGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 768px) { .factorGrid { grid-template-columns: 1fr; } }
+
+.sparkCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4) var(--space-5);
+}
+
+.sparkHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.sparkline {
+  width: 100%;
+  height: 80px;
+}
+
+.sparklineEmpty {
+  width: 100%;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  background: var(--bg-overlay);
+  border-radius: var(--radius-card);
+  border: 1px dashed var(--bg-border);
+}
+
+/* Financials */
+.finGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.finPanel {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4) var(--space-5);
+}
+
+.finPanel h3 {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+  color: var(--text-primary);
+}
+
+.finTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.finTable th {
+  text-align: left;
+  padding: var(--space-2) var(--space-2);
+  border-bottom: 2px solid var(--bg-border);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.finTable td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--bg-border);
+}
+
+.finTable tr:hover td { background: var(--bg-elevated); }
+.emptyCell { text-align: center; color: var(--text-muted); padding: var(--space-4) !important; font-style: italic; }
+
+/* Skeleton */
+.skelBlock { padding: var(--space-4); }
+.skelTitle { width: 200px; height: 24px; background: var(--bg-elevated); border-radius: var(--radius-tag); margin-bottom: var(--space-4); animation: shimmer 1.5s infinite; }
+.skelBody { width: 100%; height: 200px; background: var(--bg-elevated); border-radius: var(--radius-card); animation: shimmer 1.5s infinite; }
+@keyframes shimmer { 0% { opacity: 0.4; } 50% { opacity: 0.8; } 100% { opacity: 0.4; } }
+
+/* Intraday chart */
+.intradayCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4) var(--space-5);
+}
+
+.intradayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.intradayHeader h3 {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.intradayPrice {
+  font-family: var(--font-data);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.intradayChange {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.intradayPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  border: 1px dashed var(--bg-border);
+  border-radius: var(--radius-card);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

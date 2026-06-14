@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台股篩選器</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f4f3f0;--surface:#fff;--surface2:#f0efe9;--border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.15);--text:#1a1a18;--text2:#6b6b67;--text3:#9a9a95;--up:#c94a1a;--up-bg:#fdf0eb;--down:#0f7a55;--down-bg:#e8f7f1;--flat:#777773;--accent:#2a5cad;--radius:10px;--radius-sm:6px}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1a1a;--surface:#252525;--surface2:#2e2e2e;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.12);--text:#e8e8e6;--text2:#9a9a97;--text3:#6b6b68;--up:#f0683a;--up-bg:#3a2015;--down:#30a87a;--down-bg:#14352a;--flat:#888885;--accent:#6a9de0}}
+body{font-family:-apple-system,'Hiragino Sans','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:200}
+.logo{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.logo span{color:var(--accent)}
+.topbar-right{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text2)}
+.topbar-right input[type=text]{font-size:13px;padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);outline:none;height:32px;width:130px}
+.topbar-right input:focus{border-color:var(--accent)}
+.btn{padding:5px 13px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer}
+.btn:hover{background:var(--surface2)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{filter:brightness(1.1)}
+.layout{display:flex;max-width:1400px;margin:0 auto;padding:14px 16px;gap:14px}
+.sidebar{width:280px;flex-shrink:0}
+.main{flex:1;min-width:0;width:0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
+.filter-group{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.filter-group label{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px}
+select{font-size:12px;padding:4px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);outline:none;height:28px}
+.criterion{margin-bottom:12px}
+.criterion:last-child{margin-bottom:0}
+.criterion-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.criterion-name{font-size:12px;font-weight:500}
+.criterion-val{font-size:11px;color:var(--accent);font-weight:600;cursor:pointer}
+.criterion-sub{font-size:10px;color:var(--text3);margin-bottom:4px}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:var(--border2);border-radius:2px;outline:none;margin:4px 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--surface)}
+.range-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text3)}
+.status-bar{display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;font-size:12px;color:var(--text2)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-loading{background:#e09c18;animation:pulse 1.2s infinite}
+.dot-ok{background:var(--down)}
+.dot-err{background:var(--up)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.result-controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:12px;color:var(--text2);gap:8px}
+.result-controls .count{font-weight:600;color:var(--text)}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:calc(100vh - 180px)}
+table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+thead th{padding:6px 8px;text-align:center;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;background:var(--surface2);border-bottom:1px solid var(--border);position:sticky;top:0;cursor:pointer;user-select:none}
+thead th:hover{color:var(--text)}
+thead th:first-child{text-align:left;padding-left:10px}
+tbody td{padding:5px 8px;border-bottom:1px solid rgba(0,0,0,.04);text-align:center;font-variant-numeric:tabular-nums}
+tbody td:first-child{padding-left:10px;text-align:left;font-weight:500}
+tbody tr:hover td{background:var(--surface2);cursor:pointer}
+.badge{display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:600}
+.badge-pass{background:var(--down-bg);color:var(--down)}
+.badge-fail{background:var(--up-bg);color:var(--up)}
+.badge-na{background:var(--surface2);color:var(--flat)}
+.text-right{text-align:right}
+@media(max-width:768px){.layout{flex-direction:column}.sidebar{width:100%}.sidebar{order:2}.main{width:100%;order:1}.table-wrap{max-height:none}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">台股<span>篩選器</span></div>
+  <div class="topbar-right">
+    <input type="text" id="searchInput" placeholder="搜尋代號/名稱">
+    <span id="topDate"></span>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="card">
+      <div class="card-title">篩選條件</div>
+      <div class="filter-group">
+        <label>類別 <select id="fCategory"><option value="">全部</option><option value="twse">上市</option><option value="tpex">上櫃</option></select></label>
+        <label>產業 <select id="fIndustry"><option value="">全部</option></select></label>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">連續五年符合</div>
+      <div id="sliders"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="status-bar" id="statusBar">
+      <span class="dot dot-ok" id="statusDot"></span>
+      <span id="statusText">載入中...</span>
+    </div>
+    <div class="result-controls">
+      <span>符合 <strong id="matchCount">0</strong> / <span id="totalCount">0</span> 檔</span>
+      <span>點擊列查看 5 年詳細分析</span>
+    </div>
+    <div class="table-wrap" id="tableWrap">
+      <table><thead id="resultHeader"></thead><tbody id="resultBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════
+   CRITERIA DEFINITION
+═══════════════════════════════════ */
+const CRITERIA=[
+  {id:'closePrice',label:'收盤價',unit:'元',min:0,max:2000,step:10,default:10,dir:'gte',field:'close'},
+  {id:'dividendYield',label:'殖利率',unit:'%',min:0,max:20,step:0.5,default:0,dir:'gte',field:'yield'},
+  {id:'returnRate',label:'年報酬(1年)',unit:'%',min:-50,max:100,step:1,default:-50,dir:'gte',field:'returnR'},
+  {id:'fillDays',label:'填息天數',unit:'天',min:0,max:120,step:1,default:120,dir:'lte',field:'fillD'},
+  {id:'eps',label:'每股盈餘',unit:'元',min:0,max:50,step:0.5,default:0,dir:'gte',field:'eps'},
+  {id:'pe',label:'本益比',unit:'倍',min:0,max:50,step:0.5,default:50,dir:'lte',field:'pe'},
+  {id:'roe',label:'股東權益報酬',unit:'%',min:0,max:50,step:0.5,default:0,dir:'gte',field:'roe'},
+];
+
+let allStocks=[]; // master array of merged stock objects
+let filteredStocks=[];
+
+/* ═══════════════════════════════════
+   UI BUILDERS
+═══════════════════════════════════ */
+function buildSliders(){
+  const el=document.getElementById('sliders');
+  el.innerHTML=CRITERIA.map(c=>{
+    const dirLabel=c.dir==='gte'?'≥':'≤';
+    return `<div class="criterion">
+      <div class="criterion-header">
+        <span class="criterion-name">${c.label}</span>
+        <span class="criterion-val" id="val-${c.id}">${c.default}${c.unit}</span>
+      </div>
+      <div class="criterion-sub">${dirLabel} 門檻</div>
+      <input type="range" id="slider-${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.default}">
+      <div class="range-labels"><span>${c.min}${c.unit}</span><span>${c.max}${c.unit}</span></div>
+    </div>`;
+  }).join('');
+  CRITERIA.forEach(c=>{
+    document.getElementById('slider-'+c.id).addEventListener('input',()=>{
+      const v=document.getElementById('slider-'+c.id).value;
+      document.getElementById('val-'+c.id).textContent=v+c.unit;
+      console.log('Slider',c.id,'=',v);
+      applyFilters();
+    });
+  });
+}
+
+function getThresholds(){
+  const t={};
+  CRITERIA.forEach(c=>{t[c.id]=parseFloat(document.getElementById('slider-'+c.id).value);});
+  return t;
+}
+
+/* ═══════════════════════════════════
+   DATA LOADING
+═══════════════════════════════════ */
+const FINMIND='https://api.finmindtrade.com/api/v4/data';
+const SCREENER_API='/api/v1/screener';
+
+async function fetchJSON(url){const r=await fetch(url,{cache:'no-store'});return r.json();}
+
+function setStatus(msg,type){
+  document.getElementById('statusDot').className='dot dot-'+type;
+  document.getElementById('statusText').textContent=msg;
+}
+
+async function fetchDayAll(){
+  const urls=[
+    'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL',
+    'https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=open_data',
+  ];
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{cache:'no-store'});
+      if(!r.ok)continue;
+      const text=await r.text();
+      // Try JSON first (some endpoints return JSON with wrong content-type)
+      const firstChar=text.trim().charAt(0);
+      if(firstChar==='['||firstChar==='{'){
+        try{
+          const d=JSON.parse(text);
+          if(Array.isArray(d)&&d.length>0)return d;
+        }catch(_){/* not JSON, fall through to CSV */}
+      }
+      // CSV parsing
+      const lines=text.trim().split('\n');
+      if(lines.length>1){
+        const headerMap={Date:'Date',Code:'證券代號',Name:'證券名稱',TradeVolume:'成交股數',TradeValue:'成交金額',
+          OpeningPrice:'開盤價',HighestPrice:'最高價',LowestPrice:'最低價',ClosingPrice:'收盤價',
+          Change:'漲跌價差',Transaction:'成交筆數'};
+        const rawHeaders=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());
+        const headers=rawHeaders.map(h=>headerMap[h]||h);
+        return lines.slice(1).filter(line=>line.trim()).map(line=>{
+          const cols=line.split(',').map(c=>c.replace(/"/g,'').trim());
+          const obj={};
+          headers.forEach((h,i)=>{obj[h]=cols[i]||'';});
+          return obj;
+        });
+      }
+    }catch(e){continue;}
+  }
+  return [];
+}
+
+async function loadAll(){
+    setStatus('正在載入台股資料...','loading');
+  try{
+    // Fetch all data sources in parallel
+    const [infoData,dayData,screenerRes]=await Promise.all([
+      fetchJSON(`${FINMIND}?dataset=TaiwanStockInfo`),
+      fetchDayAll(),
+      fetch(SCREENER_API,{cache:'no-store'}).then(r=>r.json()).catch(()=>({data:null,meta:{}})),
+    ]);
+
+    const screenerStocks=screenerRes.data?.stocks||{};
+    const screenerMeta=screenerRes.meta||{};
+
+    // Parse info (industry, name fallback)
+    const infoMap={};
+    (infoData.data||[]).forEach(i=>{infoMap[i.stock_id]=i;});
+
+    // Parse STOCK_DAY_ALL
+    const dayList=Array.isArray(dayData)?dayData:[];
+
+    // Merge
+    const seen=new Set();
+    allStocks=[];
+    dayList.forEach(d=>{
+      const code=d.Code||d['證券代號'];
+      if(!code||seen.has(code))return;
+      seen.add(code);
+      const info=infoMap[code]||{};
+      const sc=screenerStocks[code]||{};
+      const close=parseFloat(d.ClosingPrice||d['收盤價']||sc.price||0);
+      const open=parseFloat(d.OpeningPrice||d['開盤價']||0);
+      const change=parseFloat(d.Change||d['漲跌價差']||0);
+      const vol=parseFloat(d.TradeVolume||d['成交股數']||0);
+
+      allStocks.push({
+        code,
+        name:d.Name||d['證券名稱']||info.stock_name||sc.name||'',
+        industry:info.industry_category||sc.industry||'',
+        type:info.type||sc.market||(code.startsWith('6')?'tpex':'twse'),
+        close,open,change,vol,
+        pe:sc.pe!=null?sc.pe:null,
+        yield:sc.dy!=null?sc.dy:null,
+        pb:sc.pb!=null?sc.pb:null,
+        eps:sc.eps!=null?sc.eps:null,
+        roe:sc.roe!=null?sc.roe:null,
+        returnR:sc.cagr_1y!=null?sc.cagr_1y:null,
+        fillD:null, // unavailable in screener
+      });
+    });
+
+    // Build industry list
+    const industries=[...new Set(allStocks.map(s=>s.industry).filter(Boolean))].sort();
+    const sel=document.getElementById('fIndustry');
+    industries.forEach(ind=>{
+      const opt=document.createElement('option');
+      opt.value=ind;opt.textContent=ind;
+      sel.appendChild(opt);
+    });
+
+    const dateStr=dayList[0]?.Date||'';
+    const cachedStr=screenerMeta.cached_at?` ｜快取: ${new Date(screenerMeta.cached_at).toLocaleString('zh-TW',{hour:'2-digit',minute:'2-digit'})}`:'';
+    setStatus(`✓ 載入 ${allStocks.length} 檔${cachedStr}`,'ok');
+    document.getElementById('totalCount').textContent=allStocks.length;
+    document.getElementById('topDate').textContent=dateStr;
+    applyFilters();
+  }catch(e){
+    console.error(e);
+    setStatus(`錯誤：${e.message}`,'err');
+  }
+}
+
+/* ═══════════════════════════════════
+   FILTERING
+═══════════════════════════════════ */
+function applyFilters(){
+  const thresh=getThresholds();
+  const cat=document.getElementById('fCategory').value;
+  const ind=document.getElementById('fIndustry').value;
+  const q=document.getElementById('searchInput').value.trim().toLowerCase();
+
+  filteredStocks=allStocks.filter(s=>{
+    // Category filter
+    if(cat&&s.type!==cat)return false;
+    // Industry filter
+    if(ind&&s.industry!==ind)return false;
+    // Search
+    if(q&&!s.code.includes(q)&&!s.name.toLowerCase().includes(q))return false;
+    // Criteria thresholds — skip criteria with no data for this stock
+    return CRITERIA.every(c=>{
+      const val=s[c.field];
+      if(val===null||val===undefined||isNaN(val))return true; // no data → skip
+      if(c.dir==='gte')return val>=thresh[c.id];
+      return val<=thresh[c.id];
+    });
+  });
+
+  document.getElementById('matchCount').textContent=filteredStocks.length;
+  renderTable();
+}
+
+// Debounce search
+document.getElementById('searchInput').addEventListener('input',debounce(applyFilters,200));
+document.getElementById('fCategory').addEventListener('change',applyFilters);
+document.getElementById('fIndustry').addEventListener('change',applyFilters);
+
+function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
+
+/* ═══════════════════════════════════
+   TABLE RENDER
+═══════════════════════════════════ */
+let sortCol='close';
+let sortDir=-1;
+
+function renderTable(){
+  const thresh=getThresholds();
+  // Sort
+  const sorted=[...filteredStocks].sort((a,b)=>{
+    let va=a[sortCol],vb=b[sortCol];
+    if(va===null||va===undefined)va=-Infinity;
+    if(vb===null||vb===undefined)vb=-Infinity;
+    return va<vb?sortDir:(va>vb?-sortDir:0);
+  });
+
+  // Header
+  const thead=document.getElementById('resultHeader');
+  const cols=[
+    {id:'code',label:'代號'},
+    {id:'name',label:'名稱'},
+    {id:'close',label:'收盤價'},
+    {id:'change',label:'漲跌'},
+    {id:'pe',label:'本益比'},
+    {id:'yield',label:'殖利率'},
+    {id:'eps',label:'EPS≈'},
+    {id:'roe',label:'ROE≈'},
+    {id:'returnR',label:'年報酬(1年)'},
+    {id:'fillD',label:'填息天'},
+    {id:'passCount',label:'通過'},
+  ];
+  thead.innerHTML=cols.map(c=>{
+    const arrow=c.id===sortCol?(sortDir===1?' ▲':' ▼'):'';
+    return `<th onclick="sortCol='${c.id}';sortDir=${sortCol===c.id?-sortDir:1};renderTable()">${c.label}${arrow}</th>`;
+  }).join('');
+
+  // Body
+  const tbody=document.getElementById('resultBody');
+  if(sorted.length===0){
+    tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--text3)">無符合條件的股票</td></tr>';
+    return;
+  }
+
+  function cellMark(val,dir,th){
+    if(val===null||isNaN(val))return['-','badge-na'];
+    const pass=dir==='gte'?val>=th:val<=th;
+    return [pass?'✓':'✗',pass?'badge-pass':'badge-fail'];
+  }
+
+  let rows='';
+  sorted.forEach(s=>{
+    const marks=CRITERIA.map(c=>cellMark(s[c.field],c.dir,thresh[c.id]));
+    const passCount=marks.filter(m=>m[0]==='✓').length;
+    const totalAvail=marks.filter(m=>m[0]!=='-').length;
+
+    const chgPct=s.open>0?((s.change/s.open)*100).toFixed(1):'-';
+    rows+=`<tr onclick="showDetail('${s.code}')">
+      <td>${s.code}</td>
+      <td>${s.name||'-'}</td>
+      <td>${s.close?s.close.toFixed(0):'-'}</td>
+      <td style="color:${s.change>0?'var(--up)':s.change<0?'var(--down)':'var(--text)'}">${chgPct!=='-'?chgPct+'%':'-'}</td>
+      <td><span class="badge ${marks[5][1]}">${marks[5][0]}</span> ${s.pe?s.pe.toFixed(1):'-'}</td>
+      <td><span class="badge ${marks[1][1]}">${marks[1][0]}</span> ${s.yield!==null?s.yield.toFixed(2)+'%':'-'}</td>
+      <td><span class="badge ${marks[4][1]}">${marks[4][0]}</span> ${s.eps?s.eps.toFixed(1):'-'}</td>
+      <td><span class="badge ${marks[6][1]}">${marks[6][0]}</span> ${s.roe?s.roe.toFixed(1)+'%':'-'}</td>
+      <td><span class="badge ${marks[2][1]}">${marks[2][0]}</span> ${s.returnR!==null?(s.returnR>=0?'+':'')+s.returnR.toFixed(1)+'%':'-'}</td>
+      <td><span class="badge ${marks[3][1]}">${marks[3][0]}</span> ${s.fillD!==null?s.fillD:'需點股'}</td>
+      <td><span class="badge ${passCount>=4?'badge-pass':'badge-fail'}">${passCount}/${totalAvail}</span></td>
+    </tr>`;
+  });
+  tbody.innerHTML=rows;
+}
+
+/* ═══════════════════════════════════
+   STOCK DETAIL (open in new tab)
+═══════════════════════════════════ */
+function showDetail(code){
+  const thresh=getThresholds();
+  const qs=CRITERIA.map(c=>`${c.id}=${thresh[c.id]}`).join('&');
+  window.open(`twse-screener-detail.html?code=${code}&${qs}`,'_blank');
+}
+
+/* ═══════════════════════════════════
+   INIT
+═══════════════════════════════════ */
+buildSliders();
+loadAll();
+</script>
+</body>
+</html>

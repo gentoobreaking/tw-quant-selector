@@ -1,0 +1,22 @@
+.page { padding: 24px; }
+.page h1 { font-size: 1.5rem; margin-bottom: 16px; }
+.page h2 { font-size: 1.1rem; margin-bottom: 12px; }
+.page h3 { font-size: 0.95rem; margin-bottom: 8px; color: var(--text-secondary); }
+.loading { color: var(--text-muted); padding: 32px; text-align: center; }
+.section { margin-bottom: 24px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+.tab { padding: 8px 16px; border: 1px solid var(--bg-border); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
+.tab.active { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+.chartBox { margin-bottom: 20px; padding: 12px; background: var(--bg-surface); border-radius: var(--radius-card); }
+.corrTable { border-collapse: collapse; font-size: 0.85rem; }
+.corrTable th, .corrTable td { padding: 6px 10px; text-align: center; border: 1px solid var(--bg-border); }
+.corrTable th { font-weight: 600; background: var(--bg-surface); position: sticky; top: 0; }
+.instCtrl { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.instCtrl select { padding: 6px 10px; border: 1px solid var(--bg-border); border-radius: var(--radius-card); background: var(--bg-surface); color: var(--text-primary); }
+.btn { padding: 6px 14px; background: var(--color-accent); color: #fff; border: none; border-radius: var(--radius-card); cursor: pointer; font-size: 0.85rem; }
+.btn:hover { opacity: .85; }
+.instResult { display: flex; gap: 16px; }
+.instCard { flex: 1; background: var(--bg-surface); border-radius: var(--radius-card); padding: 20px; text-align: center; }
+.instLabel { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
+.instValue { display: block; font-size: 1.5rem; font-weight: 700; font-family: var(--font-data); }
+.instCount { font-size: 0.8rem; color: var(--text-muted); }

@@ -1,0 +1,73 @@
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.header h3 {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  margin: 0;
+}
+
+.hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.legend {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  justify-content: center;
+}
+
+.legendItem {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.tooltip {
+  background: var(--bg-elevated);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-tag);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.tooltipTime {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.tooltipRow {
+  color: var(--text-secondary);
+}
+
+.empty {
+  text-align: center;
+  padding: var(--space-8);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  color: var(--text-secondary);
+}

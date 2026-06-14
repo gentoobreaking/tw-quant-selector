@@ -1,0 +1,86 @@
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-surface-alt);
+  border-radius: 8px;
+  margin: 0.5rem 0;
+  border: 1px solid var(--bg-border);
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.chartTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.priceRange {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.svgWrapper {
+  height: 100px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  padding: 8px;
+  border: 1px solid var(--bg-border-dim);
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+}
+
+.factorGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.factorItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.factorName {
+  width: 1.2rem;
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.noData {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 1rem;
+}
+
+.loading, .empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}

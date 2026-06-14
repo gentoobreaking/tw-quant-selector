@@ -1,0 +1,25 @@
+# Strategy Weights — 6-Factor Model
+# This file is the source of truth for strategy factor weights.
+# Updated by PUT /api/v1/strategy/config and read by the pipeline.
+
+weights:
+  momentum: 0.25
+  value: 0.20
+  quality: 0.20
+  growth: 0.15
+  institutional: 0.20
+
+advanced_params:
+  momentum_lookback: 252
+  rebalance_freq: weekly
+  top_n: 20
+  min_score: 1.0
+
+guru_config:
+  min_f_score: 5
+  altman_z_threshold: 1.8
+
+universe_config:
+  min_price: 10
+  exclude_etf: true
+  exclude_warrant: true

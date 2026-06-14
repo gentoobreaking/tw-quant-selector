@@ -1,0 +1,34 @@
+.page { padding: 24px; }
+.page h1 { font-size: 1.5rem; margin-bottom: 16px; }
+.kpiRow { display: flex; gap: 16px; margin-bottom: 24px; }
+.kpi { flex: 1; background: var(--bg-surface); border-radius: var(--radius-card); padding: 16px; text-align: center; }
+.kpiLabel { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+.kpiValue { font-size: 1.3rem; font-weight: 700; font-family: var(--font-data); }
+.searchRow { display: flex; gap: 8px; margin-bottom: 16px; }
+.input { flex: 1; max-width: 200px; padding: 8px; border: 1px solid var(--bg-border); border-radius: var(--radius-card); background: var(--bg-surface); color: var(--text-primary); }
+.btn { padding: 8px 16px; background: var(--color-accent); color: #fff; border: none; border-radius: var(--radius-card); cursor: pointer; }
+.btn:hover { opacity: .85; }
+.empty { color: var(--text-muted); text-align: center; padding: 32px; }
+.chartWrap { background: var(--bg-surface); border-radius: var(--radius-card); padding: 16px; }
+
+/* TopN 買賣超排行 */
+.topSection { margin-top: 32px; }
+.topSection h2 { font-size: 1.15rem; margin-bottom: 12px; }
+.topControls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.topBtn {
+  padding: 6px 14px; border: 1px solid var(--bg-border); border-radius: 20px;
+  background: var(--bg-surface); color: var(--text-secondary); font-size: 0.82rem;
+  cursor: pointer; transition: all .15s;
+}
+.topBtn:hover { border-color: var(--color-accent); color: var(--text-primary); }
+.topBtnActive { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+.topTable { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.topTable th, .topTable td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--bg-border); }
+.topTable th { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); background: var(--bg-surface-alt); }
+.topTable th:first-child, .topTable td:first-child { text-align: center; width: 36px; }
+.topTable th:nth-child(2), .topTable td:nth-child(2) { text-align: left; }
+.rankCell { font-weight: 700; color: var(--text-muted); }
+.nameCell { display: flex; flex-direction: column; gap: 2px; }
+.stockId { font-weight: 600; color: var(--text-primary); }
+.stockName { font-size: 0.75rem; color: var(--text-muted); }
+.closeCell { font-family: var(--font-data); color: var(--text-secondary); }

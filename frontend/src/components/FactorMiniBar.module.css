@@ -1,0 +1,46 @@
+.bar {
+  width: 100%;
+  height: var(--density-factor-bar-height);
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+
+.withLabels {
+  height: calc(var(--density-factor-bar-height) + 12px);
+}
+
+.fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.extreme {
+  box-shadow: 0 0 6px currentColor;
+}
+
+.labels {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 8px;
+  pointer-events: none;
+}
+
+.scoreVal {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.pctVal {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  line-height: 1;
+}

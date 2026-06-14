@@ -1,0 +1,64 @@
+.page { padding: 24px; }
+.page h1 { font-size: 1.5rem; margin-bottom: 16px; }
+.page h2 { font-size: 1.1rem; margin-bottom: 12px; }
+.page h3 { font-size: 1rem; margin-bottom: 10px; }
+
+.description { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin: -8px 0 20px; padding: 12px 16px; background: var(--bg-surface); border-left: 3px solid var(--color-accent); border-radius: var(--radius-card); }
+.description strong { color: var(--text-primary); }
+
+.loading { color: var(--text-muted); padding: 32px; text-align: center; }
+.section { margin-bottom: 24px; }
+
+/* ── Tab Bar ── */
+.tabBar { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--bg-border); }
+.tab { padding: 8px 18px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; transition: all .15s; }
+.tab:hover { color: var(--text-primary); background: var(--bg-surface); }
+.tabActive { color: var(--color-accent) !important; border-bottom-color: var(--color-accent); font-weight: 600; }
+
+/* ── Filters ── */
+.filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.filters select, .filters input { padding: 6px 10px; border: 1px solid var(--bg-border); border-radius: var(--radius-card); background: var(--bg-surface); color: var(--text-primary); font-size: 0.85rem; }
+.filterLabel { font-size: 0.85rem; color: var(--text-muted); margin-right: 4px; }
+.checkLabel { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; user-select: none; cursor: pointer; }
+.btn { padding: 6px 14px; background: var(--color-accent); color: #fff; border: none; border-radius: var(--radius-card); cursor: pointer; font-size: 0.85rem; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn:hover:not(:disabled) { opacity: .85; }
+
+/* ── Stats ── */
+.statsHeader { display: flex; justify-content: space-between; align-items: center; }
+.statsToggle button { padding: 4px 12px; border: 1px solid var(--bg-border); background: var(--bg-surface); cursor: pointer; font-size: 0.8rem; color: var(--text-primary); }
+.statsToggle button:first-child { border-radius: 4px 0 0 4px; }
+.statsToggle button:last-child { border-radius: 0 4px 4px 0; }
+.statsToggle .active { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+
+/* ── Tables ── */
+.table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.table th, .table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--bg-border); }
+.table th { font-weight: 600; color: var(--text-muted); }
+.cellTime { white-space: nowrap; font-family: var(--font-data); font-size: 0.8rem; }
+.cellMsg { max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Conditional Formatting ── */
+.bgRed { background: #FFE6E6; }
+.bgGreen { background: #E6FFE6; }
+.textRed { color: #d32f2f; font-weight: 600; }
+.textGreen { color: #2e7d32; font-weight: 600; }
+
+/* ── Badge ── */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; color: #fff; font-size: 0.75rem; font-weight: 600; }
+
+/* ── Resolve ── */
+.resolveRow { display: flex; gap: 8px; align-items: center; }
+.resolveRow select { flex: 1; padding: 6px 10px; border: 1px solid var(--bg-border); border-radius: var(--radius-card); background: var(--bg-surface); color: var(--text-primary); }
+.resolveRow input { flex: 1; padding: 6px 10px; border: 1px solid var(--bg-border); border-radius: var(--radius-card); background: var(--bg-surface); color: var(--text-primary); }
+
+/* ── Alert Cards (real-time wall) ── */
+.alertCard { padding: 10px 14px; margin-bottom: 8px; background: var(--bg-surface); border-radius: var(--radius-card); border-left: 3px solid var(--color-accent); cursor: pointer; transition: background .15s; }
+.alertCard:hover { background: var(--bg-hover, #f5f5f5); }
+.alertCardHeader { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
+.alertIcon { font-size: 1.1rem; width: 24px; text-align: center; }
+.alertTime { font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-data); white-space: nowrap; }
+.alertStock { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+.alertType { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-left: auto; }
+.alertMsg { font-size: 0.85rem; color: var(--text-primary); padding-left: 34px; }
+.alertDetails { font-size: 0.75rem; color: var(--text-muted); padding: 8px 12px; margin: 6px 0 0 34px; background: var(--bg-canvas); border-radius: 4px; overflow-x: auto; white-space: pre-wrap; }

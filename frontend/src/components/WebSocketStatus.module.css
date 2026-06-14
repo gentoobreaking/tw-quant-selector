@@ -1,0 +1,42 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-tag);
+  font-weight: 500;
+}
+
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.connected {
+  background: var(--color-positive-dim, #052e16);
+  color: var(--color-positive, #22c55e);
+}
+.connected .dot { background: var(--color-positive, #22c55e); }
+
+.connecting {
+  background: var(--color-accent-dim, #1e3a5f);
+  color: var(--color-accent, #38bdf8);
+}
+.connecting .dot {
+  background: var(--color-accent, #38bdf8);
+  animation: pulse 1s infinite;
+}
+
+.disconnected {
+  background: var(--color-negative-dim, #450a0a);
+  color: var(--color-negative, #ef4444);
+}
+.disconnected .dot { background: var(--color-negative, #ef4444); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}

@@ -1,0 +1,83 @@
+services:
+  app:
+    image: tw-quant-app:latest
+    container_name: app
+    hostname: app
+    build: .
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - TZ=Asia/Taipei
+      - PYTHONUNBUFFERED=1
+      - ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://frontend:5173
+#      - DUCKDB_PATH=/data/tw_quant.duckdb
+    volumes:
+      - ./data:/data
+      - ./output:/output
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - .:/app
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    image: node:20-alpine
+    container_name: frontend
+    hostname: frontend
+    working_dir: /app/frontend
+    env_file: .env
+    environment:
+      - TZ=Asia/Taipei
+      - VITE_API_TARGET=http://app:8000
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host"
+
+  scheduler:
+    image: tw-quant-scheduler:latest
+    container_name: scheduler
+    hostname: scheduler
+    profiles:
+      - scheduler
+    build: .
+    command: bash scripts/run_pipeline_with_retry.sh
+    env_file: .env
+    environment:
+      - TZ=Asia/Taipei
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/data
+      - ./output:/output
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - .:/app
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    hostname: postgres
+    environment:
+      - POSTGRES_USER=tw-quant
+      - POSTGRES_PASSWORD=tw-quant-PassWd
+      - POSTGRES_DB=tw_quant
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tw-quant -d tw_quant"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+

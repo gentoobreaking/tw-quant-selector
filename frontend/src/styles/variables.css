@@ -1,0 +1,293 @@
+/* ════════════════════════════════════════════════════════
+   Design Token System — Three-Tier Architecture
+   Spec: §1.2 (Primitive), §1.3 (Semantic), §1.4 (Component)
+   ════════════════════════════════════════════════════════ */
+
+:root {
+  /* ══════════════════════════════════════════════════════
+     TIER 1 — PRIMITIVE TOKENS  (prefix: --_)
+     Raw values with no semantic meaning
+     ══════════════════════════════════════════════════════ */
+
+  /* ── Color primitives: Ink (neutral bg/text) ── */
+  --_ink-900:   #0d0f14;
+  --_ink-800:   #141720;
+  --_ink-750:   #1c2030;
+  --_ink-700:   #242840;
+  --_ink-650:   #2a2f42;
+  --_ink-500:   #545870;
+  --_ink-300:   #8b90a4;
+  --_ink-100:   #e8eaf0;
+
+  /* ── Color primitives: Emerald (positive/up) ── */
+  --_emerald-500:  #00c896;
+  --_emerald-dim:  #003d2e;
+  --_emerald-text: #00e8ac;
+
+  /* ── Color primitives: Crimson (negative/down) ── */
+  --_crimson-500:  #ff4d6a;
+  --_crimson-dim:  #3d0014;
+  --_crimson-text: #ff7088;
+
+  /* ── Color primitives: Amber (neutral/warning) ── */
+  --_amber-warning: #f5a623;
+  --_amber-dim:     #3d2900;
+
+  /* ── Color primitives: Blue (accent/interactive) ── */
+  --_blue-500: #4f8ef7;
+  --_blue-dim: #0a1f4d;
+
+  /* ── Color primitives: Factor specific ── */
+  --_purple-500: #a78bfa;
+  --_green-500:  #34d399;
+  --_amber-500:  #f59e0b;
+  --_cyan-500:   #38bdf8;
+  --_pink-500:   #ec4899;
+
+  /* ── Spacing primitives (value = px) ── */
+  --_space-4:  4px;
+  --_space-8:  8px;
+  --_space-12: 12px;
+  --_space-16: 16px;
+  --_space-20: 20px;
+  --_space-24: 24px;
+  --_space-32: 32px;
+  --_space-40: 40px;
+  --_space-48: 48px;
+  --_space-64: 64px;
+
+  /* ── Radius primitives ── */
+  --_radius-2:  2px;
+  --_radius-4:  4px;
+  --_radius-6:  6px;
+  --_radius-8:  8px;
+  --_radius-12: 12px;
+
+  /* ── Duration primitives ── */
+  --_dur-50:   0.05s;
+  --_dur-100:  0.1s;
+  --_dur-120:  0.12s;
+  --_dur-150:  0.15s;
+  --_dur-200:  0.2s;
+  --_dur-250:  0.25s;
+  --_dur-300:  0.3s;
+  --_dur-400:  0.4s;
+  --_dur-500:  0.5s;
+  --_dur-800:  0.8s;
+  --_dur-1000: 1s;
+  --_dur-1500: 1.5s;
+
+  /* ── Easing primitives ── */
+  --_ease-out:    cubic-bezier(0, 0, 0.2, 1);
+  --_ease-in:     cubic-bezier(0.4, 0, 1, 1);
+  --_ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --_ease-linear: linear;
+
+  /* ── Font size primitives ── */
+  --_fs-11: 11px;
+  --_fs-13: 13px;
+  --_fs-15: 15px;
+  --_fs-18: 18px;
+  --_fs-24: 24px;
+  --_fs-32: 32px;
+  --_fs-48: 48px;
+
+
+  /* ══════════════════════════════════════════════════════
+     TIER 2 — SEMANTIC TOKENS
+     Domain-meaningful names that reference primitives.
+     All components SHOULD reference only this layer.
+     ══════════════════════════════════════════════════════ */
+
+  /* ── Background layers ── */
+  --bg-base:     var(--_ink-900);
+  --bg-surface:  var(--_ink-800);
+  --bg-elevated: var(--_ink-750);
+  --bg-overlay:  var(--_ink-700);
+  --bg-border:   var(--_ink-650);
+
+  /* ── Text layers ── */
+  --text-primary:   var(--_ink-100);
+  --text-secondary: var(--_ink-300);
+  --text-muted:     var(--_ink-500);
+  --text-inverse:   var(--_ink-900);
+
+  /* ── Up / positive ── */
+  --color-positive:      var(--_emerald-500);
+  --color-positive-dim:  var(--_emerald-dim);
+  --color-positive-text: var(--_emerald-text);
+
+  /* ── Down / negative ── */
+  --color-negative:      var(--_crimson-500);
+  --color-negative-dim:  var(--_crimson-dim);
+  --color-negative-text: var(--_crimson-text);
+
+  /* ── Neutral / warning ── */
+  --color-neutral:     var(--_amber-warning);
+  --color-neutral-dim: var(--_amber-dim);
+
+  /* ── Accent (links, focused controls) ── */
+  --color-accent:     var(--_blue-500);
+  --color-accent-dim: var(--_blue-dim);
+
+  /* ── Factor semantic colors ── */
+  --color-momentum: var(--_purple-500);
+  --color-value:    var(--_green-500);
+  --color-quality:  var(--_amber-500);
+  --color-growth:   var(--_cyan-500);
+  --color-guru:         var(--_blue-500);
+  --color-institutional: var(--_pink-500);
+
+  /* ── Spacing (step names for convenient shorthand) ── */
+  --space-1:  var(--_space-4);
+  --space-2:  var(--_space-8);
+  --space-3:  var(--_space-12);
+  --space-4:  var(--_space-16);
+  --space-5:  var(--_space-20);
+  --space-6:  var(--_space-24);
+  --space-8:  var(--_space-32);
+  --space-10: var(--_space-40);
+  --space-12: var(--_space-48);
+  --space-16: var(--_space-64);
+
+  /* ── Border radius ── */
+  --radius-sm:   var(--_radius-2);
+  --radius-tag:  var(--_radius-4);
+  --radius-btn:  var(--_radius-6);
+  --radius-card: var(--_radius-8);
+  --radius-modal: var(--_radius-12);
+
+  /* ── Typography & font sizes ── */
+  --font-data: 'IBM Plex Mono', monospace;
+  --font-ui:   'Syne', sans-serif;
+
+  --font-size-xs:  var(--_fs-11);
+  --font-size-sm:  var(--_fs-13);
+  --font-size-md:  var(--_fs-15);
+  --font-size-lg:  var(--_fs-18);
+  --font-size-xl:  var(--_fs-24);
+  --font-size-2xl: var(--_fs-32);
+  --font-size-3xl: var(--_fs-48);
+
+  /* ── Timing & motion ── */
+  --dur-interaction: var(--_dur-100);
+  --dur-focus:       var(--_dur-120);
+  --dur-hover:       var(--_dur-100);
+  --dur-expand:      var(--_dur-300);
+  --dur-slide:       var(--_dur-200);
+  --dur-fade:        var(--_dur-200);
+  --dur-transition:  var(--_dur-250);
+  --dur-entrance:    var(--_dur-250);
+  --dur-animation:   var(--_dur-400);
+  --dur-chart:       var(--_dur-800);
+  --dur-shimmer:     var(--_dur-1500);
+
+  --ease-default: var(--_ease-out);
+  --ease-enter:   var(--_ease-out);
+  --ease-exit:    var(--_ease-in);
+  --ease-bounce:  cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Breakpoints (reference only, usable in JS/containers) ── */
+  --bp-xl: 1440px;
+  --bp-lg: 1024px;
+  --bp-md: 768px;
+  --bp-sm: 640px;
+
+  /* ── Layout constants ── */
+  --sidebar-expanded: 240px;
+  --sidebar-collapsed: 56px;
+
+  /* ═════════════════════════════════════════════════════
+     Z-INDEX TOKENS (Semantic)
+     Stacking order for all floating layers.
+     ════════════════════════════════════════════════════ */
+
+  /* ── Z-index stack ── */
+  --z-content:   1;    /* 內容層：一般內容 */
+  --z-sticky:    10;   /* 黏性層：header、sidebar */
+  --z-sidebar:   20;   /* 側邊欄：展開的 sidebar */
+  --z-dropdown:   30;   /* 下拉選單：select、dropdown */
+  --z-tooltip:    150;  /* 工具提示：tooltip（高於 popover） */
+  --z-popover:    50;   /* 彈出層：popover、picker */
+  --z-modal-bg:   200;  /* Modal 背景：半透明遮罩 */
+  --z-modal:      210;  /* Modal 內容：對話框本體 */
+  --z-toast:      220;  /* 提示訊息：toast 通知（在 Modal 上方） */
+  --z-search:     300;  /* 搜尋層：全域搜尋 */
+  --z-critical:   999;  /* 最高層：緊急公告、debug */
+
+
+  /* ══════════════════════════════════════════════════════
+     TIER 3 — COMPONENT TOKENS  (defaults, overrideable)
+     Per-component values that can be scoped overridden
+     in individual CSS module files.
+     ══════════════════════════════════════════════════════ */
+
+  /* BaseTable */
+  --table-row-height:      48px;
+  --table-row-height-dense: 36px;
+  --table-cell-padding-x: var(--space-3);
+  --table-border-width:    1px;
+
+  /* StatCard */
+  --statcard-padding:       var(--space-4);
+  --statcard-border-radius: var(--radius-card);
+
+  /* SignalTable (extends BaseTable) */
+  --signal-rank-width: 48px;
+
+  /* Toast */
+  --toast-width: 320px;
+  --toast-offset: var(--space-4);
+
+  /* Tooltip */
+  --tooltip-offset: 6px;
+
+  /* ══════════════════════════════════════════════════════
+     T053: DATA DENSITY SYSTEM
+     Three modes: comfortable / compact / dense
+     ══════════════════════════════════════════════════════ */
+
+  /* Default: Comfortable */
+  --density-row-height: 48px;
+  --density-font-size: 13px;
+  --density-cell-padding: 16px;
+  --density-card-padding: 16px;
+  --density-page-padding: 24px;
+  --density-factor-bar-height: 24px;
+  --density-gap: 16px;
+}
+
+/* T053: Compact Mode */
+[data-density="compact"] {
+  --density-row-height: 36px;
+  --density-font-size: 12px;
+  --density-cell-padding: 12px;
+  --density-card-padding: 12px;
+  --density-page-padding: 16px;
+  --density-factor-bar-height: 20px;
+  --density-gap: 12px;
+}
+
+/* T053: Dense Mode */
+[data-density="dense"] {
+  --density-row-height: 28px;
+  --density-font-size: 11px;
+  --density-cell-padding: 8px;
+  --density-card-padding: 8px;
+  --density-page-padding: 12px;
+  --density-factor-bar-height: 16px;
+  --density-gap: 8px;
+}
+
+/* ── BACKWARD-COMPATIBILITY ALIASES ──
+     Deprecated names referencing the semantic layer.
+     These will be removed in a future major version.     */
+
+:root {
+  --color-bull:      var(--color-negative);
+  --color-bull-dim:  var(--color-negative-dim);
+  --color-bull-text: var(--color-negative-text);
+  --color-bear:      var(--color-positive);
+  --color-bear-dim:  var(--color-positive-dim);
+  --color-bear-text: var(--color-positive-text);
+}

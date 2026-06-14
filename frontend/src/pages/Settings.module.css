@@ -1,0 +1,217 @@
+.page {
+  max-width: 1200px;
+  padding-bottom: var(--space-8);
+}
+
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: var(--space-6);
+  border-bottom: 2px solid var(--bg-border);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tabActive {
+  color: var(--color-accent) !important;
+  border-bottom-color: var(--color-accent);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.saveBtn, .testBtn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-btn);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+}
+
+.saveBtn { background: var(--color-accent); color: white; }
+.testBtn { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--bg-border); }
+
+.saveBtn:disabled, .testBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-6);
+}
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+}
+
+.card h3 {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-4);
+  color: var(--color-accent);
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+}
+
+.row {
+  margin-bottom: var(--space-4);
+}
+
+.inputField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.fieldLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.envTag {
+  font-size: 10px;
+  background: var(--bg-elevated);
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: var(--color-bull-text);
+  font-weight: bold;
+}
+
+.input, .lockedInput {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-base);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-tag);
+  color: var(--text-primary);
+  font-family: var(--font-data);
+}
+
+.dbInfoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-2) 0;
+}
+
+.dbInfoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-overlay);
+  border-radius: var(--radius-tag);
+  font-size: var(--font-size-sm);
+}
+
+.dbInfoLabel {
+  color: var(--text-secondary);
+}
+
+.dbInfoValue {
+  color: var(--text-primary);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.dbInfoValueLocked {
+  color: var(--text-muted);
+  background: var(--bg-overlay);
+  padding: 2px 8px;
+  border-radius: var(--radius-tag);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.lockedInput {
+  background: var(--bg-overlay);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* T100: sensitive field status badges */
+.sensitiveField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.statusSet {
+  font-size: var(--font-size-sm);
+  color: var(--color-bull-text);
+  background: var(--color-bull-dim);
+  padding: 2px 8px;
+  border-radius: var(--radius-tag);
+  align-self: flex-start;
+  font-weight: 500;
+}
+
+.statusUnset {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  background: var(--bg-overlay);
+  padding: 2px 8px;
+  border-radius: var(--radius-tag);
+  align-self: flex-start;
+  font-weight: 500;
+}
+
+.successBanner {
+  background: var(--color-bull-dim);
+  color: var(--color-bull-text);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  margin-bottom: var(--space-4);
+  font-weight: 600;
+}
+
+.errorBanner {
+  background: var(--color-bear-dim);
+  color: var(--color-bear-text);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .grid { grid-template-columns: 1fr; }
+}

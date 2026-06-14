@@ -1,0 +1,76 @@
+.layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  flex-direction: column;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.offlineBanner {
+  background: var(--color-bear-dim);
+  color: var(--color-bear-text);
+  text-align: center;
+  padding: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--density-page-padding);
+  max-width: 1440px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+/* Global search */
+.searchWrap { position: relative; flex: 1; }
+.searchInput {
+  width: 100%;
+  max-width: 360px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-btn);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  outline: none;
+}
+.searchInput:focus { border-color: var(--color-accent); }
+.searchDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  max-width: 420px;
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  z-index: var(--z-search);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.searchItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+.searchItem:hover { background: var(--bg-elevated); }
+.searchId { font-family: var(--font-data); font-weight: 600; color: var(--text-primary); min-width: 60px; }
+.searchName { color: var(--text-secondary); flex: 1; }
+.searchMeta { color: var(--text-muted); font-size: var(--font-size-xs); }

@@ -1,0 +1,254 @@
+.panel {
+  width: 100%;
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+  gap: var(--space-5);
+}
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.cardHeader {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid;
+  background: var(--bg-elevated);
+}
+
+.cardTitle {
+  font-weight: 700;
+  font-size: var(--font-size-md);
+}
+
+.cardCount {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  background: var(--bg-overlay);
+  padding: 2px 8px;
+  border-radius: var(--radius-tag);
+}
+
+.ruleList {
+  display: flex;
+  flex-direction: column;
+}
+
+.ruleRow {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--bg-border);
+  transition: background 0.15s;
+}
+
+.ruleRow:last-child {
+  border-bottom: none;
+}
+
+.ruleRow:hover {
+  background: var(--bg-elevated);
+}
+
+.ruleRow.disabled {
+  opacity: 0.55;
+}
+
+.ruleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.ruleNameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.ruleName {
+  font-family: var(--font-data);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+
+.severityBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-tag);
+}
+
+.sev_CRITICAL {
+  background: var(--color-bear-dim);
+  color: var(--color-bear-text);
+}
+
+.sev_HIGH {
+  background: #fde8e8;
+  color: #c0392b;
+}
+
+.sev_MEDIUM {
+  background: #fef3cd;
+  color: #856404;
+}
+
+.sev_LOW {
+  background: #d4edda;
+  color: #155724;
+}
+
+.saving {
+  font-size: 10px;
+  color: var(--color-accent);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSlider {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-border);
+  border-radius: 20px;
+  transition: background 0.2s;
+}
+
+.toggleSlider::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle input:checked + .toggleSlider {
+  background: var(--color-accent);
+}
+
+.toggle input:checked + .toggleSlider::before {
+  transform: translateX(16px);
+}
+
+.ruleDesc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin: var(--space-1) 0 0 0;
+}
+
+.ruleFields {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.techConfig {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--bg-border);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+  flex: 1;
+}
+
+.fieldLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fieldUnit {
+  font-family: var(--font-data);
+  color: var(--text-muted);
+}
+
+.select, .input {
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-base);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-tag);
+  color: var(--text-primary);
+  font-family: var(--font-data);
+  font-size: var(--font-size-sm);
+}
+
+.select {
+  cursor: pointer;
+}
+
+.input:focus, .select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.empty {
+  text-align: center;
+  padding: var(--space-8);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  color: var(--text-secondary);
+}
+
+.retryBtn {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-btn);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.retryBtn:hover {
+  opacity: 0.85;
+}

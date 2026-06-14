@@ -1,0 +1,60 @@
+.shimmer {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-surface) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer var(--dur-shimmer) ease-in-out infinite;
+  border-radius: var(--radius-tag);
+}
+
+.circle {
+  composes: shimmer;
+  border-radius: 50%;
+}
+
+.bar {
+  composes: shimmer;
+  height: 12px;
+}
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.titleBar { composes: shimmer; height: 16px; width: 40%; }
+.bodyBar { composes: shimmer; height: 12px; width: 80%; }
+
+.table { border: 1px solid var(--bg-border); border-radius: var(--radius-card); overflow: hidden; }
+.tableHeader { composes: shimmer; height: 40px; margin: 0; border-radius: 0; }
+.tableRow { display: flex; gap: var(--space-3); padding: var(--space-3); border-bottom: 1px solid var(--bg-border); }
+.tableRow:last-child { border-bottom: none; }
+.cell { composes: shimmer; height: 12px; }
+
+.chart {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-6);
+  position: relative;
+}
+.chartLine { composes: shimmer; height: 4px; width: 100%; position: absolute; top: 50%; transform: translateY(-50%); }
+.chartAxis { composes: shimmer; height: 1px; width: 100%; position: absolute; bottom: 30%; }
+
+.textBlock { display: flex; flex-direction: column; gap: var(--space-2); }
+.textLine { composes: shimmer; height: 12px; }
+
+/* Staggered delay for multi-element skeletons */
+.stagger > *:nth-child(1) { animation-delay: 0s; }
+.stagger > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger > *:nth-child(3) { animation-delay: 0.2s; }
+.stagger > *:nth-child(4) { animation-delay: 0.3s; }
+.stagger > *:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

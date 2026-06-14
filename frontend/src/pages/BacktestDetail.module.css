@@ -1,0 +1,99 @@
+.page { max-width: 1200px; }
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.backBtn {
+  padding: var(--space-1) var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-btn);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.backBtn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+.headerInfo { flex: 1; }
+
+.title { font-size: var(--font-size-xl); font-weight: 700; margin: 0; }
+
+.runId {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.headerMeta {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.section { margin-bottom: var(--space-4); }
+
+.section h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+}
+
+.muted { color: var(--text-muted); font-size: var(--font-size-sm); }
+
+.tableWrap { overflow-x: auto; }
+
+.tradeTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.tradeTable th {
+  text-align: left;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--bg-border);
+  color: var(--text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tradeTable td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--bg-border);
+  white-space: nowrap;
+}
+
+.tradeTable tbody tr:hover { background: var(--bg-elevated); }
+
+.stockLink { color: var(--color-accent); cursor: pointer; }
+.stockLink:hover { text-decoration: underline; }
+
+.actionBuy { color: var(--color-bull-text); font-weight: 600; }
+.actionSell { color: var(--color-bear-text); font-weight: 600; }
+
+.printBtn {
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-btn);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.printBtn:hover { opacity: 0.85; }

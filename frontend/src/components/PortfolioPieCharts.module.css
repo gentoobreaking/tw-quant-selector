@@ -1,0 +1,58 @@
+.container {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.chartWrapper {
+  flex: 1;
+  min-width: 300px;
+  max-width: 500px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.chartTitle {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.emptyState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 200px;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+}
+
+.emptyState p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .chartWrapper {
+    max-width: 100%;
+    min-width: unset;
+  }
+}

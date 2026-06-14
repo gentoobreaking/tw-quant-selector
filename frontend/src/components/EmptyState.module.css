@@ -1,0 +1,51 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  min-height: 240px;
+}
+
+.icon { font-size: 2.5rem; margin-bottom: var(--space-3); }
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.message {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  max-width: 400px;
+  margin-bottom: var(--space-3);
+  line-height: 1.5;
+}
+
+.reasons {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.reasons li::before { content: '• '; color: var(--text-muted); }
+
+.action {
+  display: inline-block;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: #000;
+  text-decoration: none;
+  border-radius: var(--radius-btn);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.action:hover { filter: brightness(1.15); }

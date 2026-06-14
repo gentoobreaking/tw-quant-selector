@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "loggers": {
+    "uvicorn.access": {
+      "handlers": [],
+      "propagate": false
+    }
+  }
+}
