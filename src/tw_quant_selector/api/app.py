@@ -436,7 +436,8 @@ async def portfolio_events():
 def get_portfolio():
     rows = db.execute("""
         SELECT p.stock_id, p.avg_cost, p.shares, p.is_etf, s.market,
-               p.pl_pct_thod, p.pl_thod, p.alert_enabled
+               p.pl_pct_thod, p.pl_thod, p.alert_enabled,
+               s.stock_name
         FROM portfolio p
         LEFT JOIN stocks s ON p.stock_id = s.stock_id
     """).fetchall()
@@ -452,7 +453,8 @@ def get_portfolio():
             "market": (r[4] or "TSE").upper(),
             "pl_pct_thod": float(r[5]) if r[5] is not None else None,
             "pl_thod": float(r[6]) if r[6] is not None else None,
-            "alert_enabled": bool(r[7]) if r[7] is not None else True
+            "alert_enabled": bool(r[7]) if r[7] is not None else True,
+            "name": str(r[8]) if r[8] else ""
         })
     return api_response(portfolio)
 
