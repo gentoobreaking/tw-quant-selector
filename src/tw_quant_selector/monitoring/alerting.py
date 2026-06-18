@@ -1148,7 +1148,8 @@ class AlertChecker:
         if not kline_stocks:
             return triggered
 
-        is_index = stock_id == '^TWII'
+        for stock_id in kline_stocks:
+            is_index = stock_id == '^TWII'
         kline_rows = self.db.execute("""
             SELECT k_time, open, high, low, close, volume
             FROM intraday_kline
