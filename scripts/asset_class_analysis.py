@@ -63,7 +63,14 @@ def calc_metrics(prices: pd.Series, name: str, stock_id: str, initial: float = 1
 
     equity_curve = prices / first_price * initial
 
-    return {
+    year_returns = {}
+    for y in [2021, 2022, 2023, 2024, 2025, 2026]:
+        y_prices = prices[prices.index.year == y]
+        if len(y_prices) >= 50:
+            y_ret = y_prices.iloc[-1] / y_prices.iloc[0] - 1
+            year_returns[f"return_{y}"] = round(float(y_ret), 4)
+
+    result = {
         "stock_id": stock_id,
         "name": name,
         "initial_value": initial,
@@ -85,6 +92,8 @@ def calc_metrics(prices: pd.Series, name: str, stock_id: str, initial: float = 1
         "n_days": len(prices),
         "years": round(years, 2),
     }
+    result.update(year_returns)
+    return result
 
 
 def main():

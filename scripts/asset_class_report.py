@@ -31,7 +31,9 @@ HOT_NAMES = {
     "2330": "台積電", "2317": "鴻海", "2454": "聯發科", "2412": "中華電",
     "2308": "台達電", "2881": "富邦金", "2882": "國泰金", "2002": "中鋼",
 }
-SEP_LINE = "|" + "|".join([":---:"] * 13) + "|"
+YEAR_FIELDS = ["return_2021", "return_2022", "return_2023", "return_2024", "return_2025", "return_2026"]
+TABLE_COLS = 2 + 5 + len(YEAR_FIELDS) + 6
+SEP_LINE = "|" + "|".join([":---:"] * TABLE_COLS) + "|"
 
 # Try to set Chinese font — probe all available sans-serif fonts for CJK
 _font_candidates = [
@@ -73,17 +75,23 @@ def _float(v) -> str:
     return f"{v:.4f}"
 
 
+YEAR_LABELS = {"return_2021": "2021", "return_2022": "2022", "return_2023": "2023", "return_2024": "2024", "return_2025": "2025", "return_2026": "2026"}
+
 def build_table(assets: list[dict], title: str) -> str:
-    lines = [f"## {title}\n", "", f"| 代碼 | 名稱 | 總報酬率 | CAGR | 年化波動度 | Sharpe | 最大回撤 | 每週均漲跌 | 每月均漲跌 | 每季均漲跌 | 每週波動度 | 每月波動度 | 每季波動度 |", SEP_LINE]
+    year_headers = "".join([f" {YEAR_LABELS.get(yf, yf)} |" for yf in YEAR_FIELDS])
+    header = f"| 代碼 | 名稱 | 總報酬率 | CAGR | 年化波動度 | Sharpe | 最大回撤 |{year_headers} 每週均漲跌 | 每月均漲跌 | 每季均漲跌 | 每週波動度 | 每月波動度 | 每季波動度 |"
+    lines = [f"## {title}\n", "", header, SEP_LINE]
     for a in assets:
+        year_cells = "".join([f" {_pct(a.get(yf))} |" for yf in YEAR_FIELDS])
         lines.append(
             f"| {a['stock_id']} | {a['name']} "
             f"| {_pct(a.get('total_return'))} | {_pct(a.get('cagr'))} "
             f"| {_pct(a.get('ann_volatility'))} | {_float(a.get('sharpe'))} "
-            f"| {_pct(a.get('max_drawdown'))} | {_pct(a.get('weekly_avg_return'))} "
-            f"| {_pct(a.get('monthly_avg_return'))} | {_pct(a.get('quarterly_avg_return'))} "
-            f"| {_pct(a.get('weekly_volatility'))} | {_pct(a.get('monthly_volatility'))} "
-            f"| {_pct(a.get('quarterly_volatility'))} |"
+            f"| {_pct(a.get('max_drawdown'))} |"
+            f"{year_cells}"
+            f" {_pct(a.get('weekly_avg_return'))} | {_pct(a.get('monthly_avg_return'))} "
+            f"| {_pct(a.get('quarterly_avg_return'))} | {_pct(a.get('weekly_volatility'))} "
+            f"| {_pct(a.get('monthly_volatility'))} | {_pct(a.get('quarterly_volatility'))} |"
         )
     return "\n".join(lines) + "\n"
 
