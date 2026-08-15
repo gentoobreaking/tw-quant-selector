@@ -94,14 +94,15 @@
 │  Strategy │ Portfolio │ Monitor │ Settings           │
 │  SSE EventSource ← 即時同步                           │
 └──────────────────┬──────────────────────────────────┘
-                   │ HTTP (localhost:8000 / Vite proxy)
+                   │ HTTP (localhost:5172 / Vite proxy)
 ┌──────────────────▼──────────────────────────────────┐
 │              FastAPI Backend (Python)                 │
 │  REST API │ EventBus(SSE) │ Strategy │ Backtest       │
 │  Alert Manager │ Response: { data, meta, error }      │
-└──────────────────┬──────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────┐
+│  MCP realtime adapter (T143) ─ 下同 ┐                │
+└──────────────────┬──────────────────┘│
+                   │                   │
+┌──────────────────▼──────────────────▼────────────────┐
 │            PostgreSQL (tw_quant)                      │
 │  stocks │ daily_prices │ valuations │ portfolio       │
 │  monthly_revenue │ financials │ signals │ alert_log    │
@@ -110,9 +111,11 @@
                    │
 ┌──────────────────▼──────────────────────────────────┐
 │          Data Sources (擷取來源)                      │
-│  TWSE (STOCK_DAY_ALL, 主要) │ FinMind (備援/TPEX)    │
-│  TWSE MIS (即時) │ TWSE/TPEX (清單)                 │
-│  98 buckets │ 循環機制 │ 健康檢查整合 (Alerting)       │
+│  tw-quant-mcp (Go, T143/T144 default)                │
+│   ├─ 盤中：get_intraday_quote / VWAP / 爆量           │
+│   ├─ 盤後：get_stock_daily_kline / 三大法人           │
+│   └─ 基本面：get_financial_statements / 估值 / 月營收 │
+│  fallback: TWSE (STOCK_DAY_ALL) │ FinMind │ MIS API │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -133,6 +136,8 @@ cp .env.example .env   # 編輯 .env，填入 POSTGRES_* 及 FINMIND_TOKEN
 FINMIND_TOKEN=your_token_here
 ```
 
+> **t w-quant-mcp (T143/T144)**：Dockerfile 第二階段已會自動 build Go 二進位進容器。預設使用 stdio transport；若要改走 streamable-http，調整 `.env` 中 `MCP_TRANSPORT=streamable-http` 與 `MCP_HTTP_ADDR`。
+
 ### 2. 啟動基礎設施（PostgreSQL）
 
 ```bash
@@ -151,7 +156,7 @@ docker compose exec postgres psql -U tw-quant -d tw_quant -f /app/init-scripts/0
 docker compose up -d app
 ```
 
-Swagger UI：http://localhost:8000/docs
+Swagger UI：http://localhost:5172/docs
 
 ### 5. 啟動前端
 

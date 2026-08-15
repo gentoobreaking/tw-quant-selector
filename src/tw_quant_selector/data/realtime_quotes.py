@@ -229,6 +229,9 @@ class MISApiClient:
 
     1. Batch request for ALL stocks → gets volume, open, high, low (but z='-').
     2. Individual requests for KEY stocks only → gets real z (current price).
+
+    T143: 可選走 MCP 路徑。設定 ``TW_USE_MCP=1`` 時優先以 tw-quant-mcp
+    取得即時報價；若 MCP 無回應/連不上，自動降級至 MIS API。
     """
 
     def __init__(self, batch_size: int = BATCH_SIZE):
@@ -273,7 +276,30 @@ class MISApiClient:
             time.sleep(0.6)  # be gentle to the API
         return result
 
+    def _fetch_via_mcp(
+        self, stock_ids: list[str], key_stock_ids: list[str] | None = None
+    ) -> list[RealtimeQuote]:
+        """T143: 改由 tw-quant-mcp 取得報價。失敗一律 raise 交給 caller fallback。"""
+        from tw_quant_selector.data.mcp.realtime_adapter import (
+            fetch_quotes_async,
+            _quote_to_realtime_quote,
+        )
+        sids = list(dict.fromkeys(list(stock_ids) + list(key_stock_ids or [])))
+        sids = [s for s in sids if not s.startswith("^")]
+        quotes = fetch_quotes_async(sids)
+        return [_quote_to_realtime_quote(q) for q in quotes if q.price is not None]
+
     def fetch_all(self, stock_ids: list[str], key_stock_ids: list[str] | None = None) -> list[RealtimeQuote]:
+        # T143 MCP-first path
+        if os.environ.get("TW_USE_MCP", "").lower() in ("1", "true", "yes"):
+            try:
+                mcp_quotes = self._fetch_via_mcp(stock_ids, key_stock_ids)
+                if mcp_quotes:
+                    return mcp_quotes
+                log.warning("mis.mcp_empty_fallback_mis")
+            except Exception as exc:  # noqa: BLE001 - fallback is best-effort
+                log.warning("mis.mcp_failed_fallback_mis", error=str(exc))
+
         base = self._batch_all(stock_ids)
         z_map = self._fetch_key_z(key_stock_ids or stock_ids[:5], quota=5)
         # Merge z into base results
@@ -284,6 +310,22 @@ class MISApiClient:
                     base[sid].change_amt = q.change_amt
                     base[sid].change_pct = q.change_pct
         return list(base.values())
+
+
+def get_mcp_status() -> dict[str, Any]:
+    """T143: 回傳 MCP 連線健康狀態，供前端狀態面板使用。
+
+    不會主動連線，僅讀取 adapter 內部狀態。
+    """
+    try:
+        from tw_quant_selector.data.mcp.realtime_adapter import is_mcp_enabled
+        enabled = is_mcp_enabled()
+        return {
+            "mcp_enabled": enabled,
+            "healthy": None,  # requires live call; reserved for future ping
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {"mcp_enabled": False, "healthy": False, "error": str(exc)}
 
 
 def poll_realtime(

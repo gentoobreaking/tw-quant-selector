@@ -12,6 +12,13 @@ services:
       - TZ=Asia/Taipei
       - PYTHONUNBUFFERED=1
       - ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://frontend:5173
+      # T143 MCP integration
+      - TW_USE_MCP=${TW_USE_MCP:-1}
+      - MCP_ENRICH_EXPORT=${MCP_ENRICH_EXPORT:-1}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-stdio}
+      - MCP_BINARY_PATH=/app/tw-quant-mcp
+      - MCP_HTTP_ADDR=${MCP_HTTP_ADDR:-127.0.0.1:8787}
+      - DATA_DIR=/data/mcp-cache
 #      - DUCKDB_PATH=/data/tw_quant.duckdb
     volumes:
       - ./data:/data
@@ -51,6 +58,12 @@ services:
     environment:
       - TZ=Asia/Taipei
       - PYTHONUNBUFFERED=1
+      # T143 MCP integration
+      - TW_USE_MCP=${TW_USE_MCP:-1}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-stdio}
+      - MCP_BINARY_PATH=/app/tw-quant-mcp
+      - MCP_HTTP_ADDR=${MCP_HTTP_ADDR:-127.0.0.1:8787}
+      - DATA_DIR=/data/mcp-cache
     volumes:
       - ./data:/data
       - ./output:/output
@@ -79,5 +92,3 @@ services:
       retries: 5
       start_period: 10s
     restart: unless-stopped
-
-

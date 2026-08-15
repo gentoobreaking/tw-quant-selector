@@ -245,6 +245,36 @@ class TestPortfolioExportImport:
         exported = _json.loads(jp.read_text(encoding="utf-8"))
         assert any(h["stock_id"] == self.baseline["stock_id"] for h in exported)
 
+    def test_export_with_mcp_enrich_disabled(self):
+        """MCP 未啟用時，輸出不包含 ``current_price``。"""
+        os.environ.pop("TW_USE_MCP", None)
+        os.environ.pop("MCP_ENRICH_EXPORT", None)
+        resp = client.post("/api/v1/portfolio/export")
+        assert resp.status_code == 200
+        import json as _json
+        from pathlib import Path
+        jp = Path.cwd() / ".stock_monitor.json"
+        exported = _json.loads(jp.read_text(encoding="utf-8"))
+        for h in exported:
+            assert "current_price" not in h
+
+    def test_export_with_mcp_enrich_fallback(self):
+        """MCP 啟用但伺服器不可用時，輸出仍舊完成（fallback）。"""
+        os.environ["TW_USE_MCP"] = "1"
+        os.environ["MCP_BINARY_PATH"] = "/nonexistent/tw-quant-mcp"
+        try:
+            resp = client.post("/api/v1/portfolio/export")
+            assert resp.status_code == 200
+            import json as _json
+            from pathlib import Path
+            jp = Path.cwd() / ".stock_monitor.json"
+            exported = _json.loads(jp.read_text(encoding="utf-8"))
+            # 即使 MCP 連不到，輸出仍包含 baseline
+            assert any(h["stock_id"] == self.baseline["stock_id"] for h in exported)
+        finally:
+            os.environ.pop("TW_USE_MCP", None)
+            os.environ.pop("MCP_BINARY_PATH", None)
+
     def test_import_json_upsert(self):
         payload = [{"stock_id": "3016", "avg_cost": 123.0, "shares": 10,
                     "is_etf": False, "pl_pct_thod": None, "pl_thod": None, "alert_enabled": True}]

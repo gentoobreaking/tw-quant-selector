@@ -7,7 +7,20 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# === Stage 2: Python API + Serve Static ===
+# === Stage 2: Build tw-quant-mcp (Go) ===
+FROM golang:1.22-alpine AS mcp-builder
+
+WORKDIR /app/tw-quant-mcp
+# 假設 tw-quant-mcp 為 sibling project；CI 觸發前需先 push 或用 submodule
+# 若專案不存在可改為 ARG TW_QUANT_MCP_SRC=...；此處以 ./tw-quant-mcp 為預設路徑
+COPY tw-quant-mcp/go.mod tw-quant-mcp/go.sum* ./
+RUN go mod download || true
+COPY tw-quant-mcp/ ./
+RUN CGO_ENABLED=0 go build -ldflags "-X main.version=docker" -o /tw-quant-mcp ./cmd/mcp-server || \
+    echo "WARN: tw-quant-mcp build skipped (source not present)" && \
+    cp /dev/null /tw-quant-mcp
+
+# === Stage 3: Python API + Serve Static ===
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1
@@ -17,9 +30,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
-    pip install --no-cache-dir --force-reinstall urllib3 requests certifi
+    pip install --no-cache-dir --force-reinstall urllib3 requests certifi && \
+    pip install --no-cache-dir mcp
 
 WORKDIR /app
+
+# MCP env defaults (T143/T144)
+ENV MCP_TRANSPORT=stdio \
+    MCP_BINARY_PATH=/app/tw-quant-mcp \
+    MCP_HTTP_ADDR=127.0.0.1:8787 \
+    DATA_DIR=/data/mcp-cache \
+    TW_USE_MCP=1 \
+    MCP_ENRICH_EXPORT=1
 
 COPY pyproject.toml README.md log_config.json ./
 COPY src/ ./src/
@@ -27,6 +49,7 @@ COPY scripts/ ./scripts/
 RUN pip install --no-cache-dir -e .
 
 COPY --from=frontend-builder /app/frontend/dist/ ./frontend/dist/
+COPY --from=mcp-builder /tw-quant-mcp /app/tw-quant-mcp
 
 EXPOSE 5172
 

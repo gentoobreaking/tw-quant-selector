@@ -971,6 +971,42 @@ def health():
     return api_response(HealthResponse(status="ok", db_connected=db_ok, last_update=last).model_dump())
 
 
+@app.get("/api/v1/mcp/status")
+def mcp_status():
+    """T143: 回傳 tw-quant-mcp 連線健康狀態，供前端狀態面板使用。
+
+    不主動呼叫 MCP（避免輪詢拚出負載），僅讀取 adapter/環境變數狀態。
+    """
+    import os as _os
+    from datetime import datetime as _dt
+
+    enabled = (
+        _os.environ.get("TW_USE_MCP", "").lower() in ("1", "true", "yes")
+        or _os.environ.get("USE_MCP_QUOTES", "").lower() in ("1", "true", "yes")
+    )
+    transport = _os.environ.get("MCP_TRANSPORT", "stdio").lower()
+    http_addr = _os.environ.get("MCP_HTTP_ADDR", "127.0.0.1:8787")
+    binary_path = _os.environ.get("MCP_BINARY_PATH", "tw-quant-mcp")
+    healthy = None
+    last_error: Optional[str] = None
+    if enabled:
+        try:
+            from tw_quant_selector.data.mcp.realtime_adapter import _MCP_CLIENT  # type: ignore
+            healthy = bool(_MCP_CLIENT and _MCP_CLIENT.is_initialized())
+        except Exception as exc:  # noqa: BLE001
+            healthy = False
+            last_error = str(exc)
+    return api_response({
+        "mcp_enabled": enabled,
+        "healthy": healthy,
+        "transport": transport,
+        "http_addr": http_addr,
+        "binary_path": binary_path,
+        "last_error": last_error,
+        "checked_at": _dt.now().isoformat(),
+    })
+
+
 @app.get("/")
 def root_redirect():
     return RedirectResponse(url="/docs")
