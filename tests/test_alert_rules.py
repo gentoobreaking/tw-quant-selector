@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
+from pydantic import ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -29,9 +30,9 @@ from scripts.seed_alert_rules import (
 # ───────────────────────────────────────────────────────
 
 def test_get_default_rules_returns_26():
-    """get_default_rules() should return 26 rules."""
+    """get_default_rules() should return 31 rules (T128 base + T132/T133 tech/index)."""
     rules = get_default_rules()
-    assert len(rules) == 27, f"Expected 26 rules, got {len(rules)}"
+    assert len(rules) == 31, f"Expected 31 rules, got {len(rules)}"
 
 
 def test_get_default_rules_all_have_required_keys():
@@ -90,16 +91,16 @@ def test_rule_categories_exist():
 
 @patch("scripts.seed_alert_rules.get_db")
 def test_upsert_alert_rules_writes_all(mock_get_db):
-    """upsert_alert_rules should INSERT all rules and return count."""
+    """upsert_alert_rules should run one upsert per rule via the session."""
     mock_db = MagicMock()
     mock_get_db.return_value = mock_db
+    session = mock_db.connection.return_value.__enter__.return_value
 
     rules = get_default_rules()
     result = upsert_alert_rules(rules)
-    assert result == 27
-    assert mock_db.execute.call_count == 27
-    mock_db.commit.assert_called_once()
-    mock_db.close.assert_called_once()
+    assert result == 31
+    assert session.execute.call_count == 31
+    mock_db.connection.assert_called_once()
 
 
 @patch("scripts.seed_alert_rules.get_db")
@@ -122,13 +123,13 @@ def test_run_seed_normal_upserts(mock_get_db):
     """run_seed() without --force should upsert (not delete)."""
     mock_db = MagicMock()
     mock_get_db.return_value = mock_db
+    session = mock_db.connection.return_value.__enter__.return_value
 
     run_seed(force=False)
     # Should NOT call DELETE
     delete_calls = [c for c in mock_db.mock_calls if "DELETE" in str(c)]
     assert len(delete_calls) == 0, "Normal seed should not DELETE"
-    assert mock_db.execute.call_count == 27
-    mock_db.commit.assert_called_once()
+    assert session.execute.call_count == 31
 
 
 @patch("scripts.seed_alert_rules.get_db")
@@ -136,10 +137,13 @@ def test_run_seed_force_deletes_then_inserts(mock_get_db):
     """run_seed(force=True) should DELETE all then INSERT all."""
     mock_db = MagicMock()
     mock_get_db.return_value = mock_db
+    session = mock_db.connection.return_value.__enter__.return_value
 
     run_seed(force=True)
-    # Should call DELETE + 26 INSERTs
-    assert mock_db.execute.call_count >= 27  # DELETE + 27 INSERTs
+    # DELETE + 31 INSERTs
+    delete_calls = [c for c in session.execute.call_args_list if "DELETE" in getattr(c.args[0], "text", str(c.args[0]))]
+    assert len(delete_calls) == 1
+    assert session.execute.call_count == 32
 
 
 # ───────────────────────────────────────────────────────
@@ -187,3 +191,51 @@ def test_api_put_alert_rule_invalid_severity(client):
     """PUT with invalid severity should return 422."""
     resp = client.put("/api/v1/alerts/rules/VOLUME_SPIKE", json={"severity": "INVALID"})
     assert resp.status_code == 422
+
+
+# ───────────────────────────────────────────────────────
+# Test: AlertRuleUpdateRequest model validation (DB-free)
+# ───────────────────────────────────────────────────────
+
+@pytest.fixture
+def update_model():
+    """Import AlertRuleUpdateRequest with Database mocked so app import works offline."""
+    with patch("tw_quant_selector.data.database.Database"):
+        from tw_quant_selector.api.app import AlertRuleUpdateRequest
+        return AlertRuleUpdateRequest
+
+
+def test_update_request_accepts_valid_severity(update_model):
+    assert update_model(severity="LOW").severity == "LOW"
+    assert update_model(severity="MEDIUM").severity == "MEDIUM"
+    assert update_model(severity="HIGH").severity == "HIGH"
+    assert update_model(severity="CRITICAL").severity == "CRITICAL"
+
+
+def test_update_request_rejects_invalid_severity(update_model):
+    with pytest.raises(ValidationError):
+        update_model(severity="INVALID")
+    with pytest.raises(ValidationError):
+        update_model(severity="")
+
+
+def test_update_request_rejects_non_positive_cooldown(update_model):
+    with pytest.raises(ValidationError):
+        update_model(cooldown_seconds=0)
+    with pytest.raises(ValidationError):
+        update_model(cooldown_seconds=-1)
+
+
+def test_update_request_partial_empty_body(update_model):
+    """Empty body → all fields None, no validation error."""
+    req = update_model()
+    assert req.enabled is None
+    assert req.severity is None
+    assert req.cooldown_seconds is None
+
+
+def test_update_request_type_coercion(update_model):
+    req = update_model(enabled="true", cooldown_seconds="120", threshold=0.5)
+    assert req.enabled is True
+    assert req.cooldown_seconds == 120
+    assert req.threshold == 0.5
