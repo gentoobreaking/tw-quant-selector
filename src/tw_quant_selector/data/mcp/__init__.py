@@ -27,6 +27,13 @@ from .models import (
 from .cache import TTLCache
 from .circuit import CircuitBreaker, CircuitState
 
+# Adapter 是選擇性導入：上層可選擇經 async MCP path 或保留 sync MIS path
+from .realtime_adapter import (
+    fetch_quotes_async,
+    fetch_quotes_with_fallback,
+    is_mcp_enabled,
+)
+
 __all__ = [
     "MCPClient",
     "MCPClientConfig",
@@ -42,4 +49,7 @@ __all__ = [
     "TTLCache",
     "CircuitBreaker",
     "CircuitState",
+    "fetch_quotes_async",
+    "fetch_quotes_with_fallback",
+    "is_mcp_enabled",
 ]

@@ -261,6 +261,9 @@ class MCPClient:
             self._session = None
             self._initialized = False
 
+    def is_initialized(self) -> bool:
+        return self._initialized and self._session is not None
+
     async def __aenter__(self) -> "MCPClient":
         await self._ensure_session()
         return self
