@@ -28,6 +28,6 @@ RUN pip install --no-cache-dir -e .
 
 COPY --from=frontend-builder /app/frontend/dist/ ./frontend/dist/
 
-EXPOSE 8000
+EXPOSE 5172
 
-CMD ["uvicorn", "tw_quant_selector.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "--log-config", "/app/log_config.json"]
+CMD ["uvicorn", "tw_quant_selector.api.app:app", "--host", "0.0.0.0", "--port", "5172", "--no-access-log", "--log-config", "/app/log_config.json"]

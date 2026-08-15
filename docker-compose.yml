@@ -20,7 +20,7 @@ services:
       - ./scripts:/app/scripts
       - .:/app
     ports:
-      - "8000:8000"
+      - "5172:5172"
     restart: unless-stopped
 
   frontend:
@@ -31,7 +31,7 @@ services:
     env_file: .env
     environment:
       - TZ=Asia/Taipei
-      - VITE_API_TARGET=http://app:8000
+      - VITE_API_TARGET=http://app:5172
     volumes:
       - ./frontend:/app/frontend
       - /app/frontend/node_modules
