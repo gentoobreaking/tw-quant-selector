@@ -350,7 +350,7 @@ function IntradayChart({ data, loading, stockId }: { data: IntradayPoint[] | nul
   const firstPrice = chartData[0]?.price ?? 0;
   const lastPrice = chartData[chartData.length - 1]?.price ?? 0;
   const change = lastPrice - firstPrice;
-  const color = change >= 0 ? 'var(--color-bull-text)' : 'var(--color-bear-text)';
+  const color = colorForChange(change);
 
   return (
     <div className={styles.intradayCard}>
