@@ -310,7 +310,7 @@ def add_portfolio_lot(lot: PortfolioLotRequest):
     db.execute("""
         INSERT INTO portfolio (stock_id, avg_cost, shares, is_etf)
         VALUES (?, ?, ?, ?)
-    """, [lot.stock_id, lot.cost, lot.shares, lot.is_etf])
+    """, [lot.stock_id, lot.cost, lot.shares, lot.is_etf], read_only=False)
     event_bus.broadcast("portfolio_update")
     return api_response({"status": "success"})
 
@@ -323,13 +323,14 @@ def update_portfolio_thresholds(stock_id: str, body: dict):
         """UPDATE portfolio SET pl_thod = ?, pl_pct_thod = ?, alert_enabled = ?
            WHERE stock_id = ?""",
         [pl_thod, pl_pct_thod, alert_enabled if alert_enabled is not None else True, stock_id],
+        read_only=False,
     )
     event_bus.broadcast("portfolio_update")
     return api_response({"status": "success"})
 
 @app.delete("/api/v1/portfolio/{stock_id}")
 def delete_portfolio_stock(stock_id: str):
-    db.execute("DELETE FROM portfolio WHERE stock_id = ?", [stock_id])
+    db.execute("DELETE FROM portfolio WHERE stock_id = ?", [stock_id], read_only=False)
     event_bus.broadcast("portfolio_update")
     return api_response({"status": "success"})
 
@@ -342,7 +343,7 @@ def get_lots():
 def add_lot(body: LotRequest):
     lid = body.id or str(uuid.uuid4())
     db.execute("INSERT INTO lots (id, stock_id, date, shares, cost) VALUES (?, ?, ?, ?, ?)",
-               [lid, body.stock_id, body.date, body.shares, body.cost])
+               [lid, body.stock_id, body.date, body.shares, body.cost], read_only=False)
     # Upsert portfolio aggregate
     existing = db.execute("SELECT avg_cost, shares FROM portfolio WHERE stock_id = ?", [body.stock_id]).fetchone()
     if existing:
@@ -353,10 +354,10 @@ def add_lot(body: LotRequest):
         total_shares = old_shares + new_shares
         avg_cost = (old_cost * old_shares + new_cost * new_shares) / total_shares
         db.execute("UPDATE portfolio SET shares = ?, avg_cost = ? WHERE stock_id = ?",
-                   [total_shares, avg_cost, body.stock_id])
+                   [total_shares, avg_cost, body.stock_id], read_only=False)
     else:
         db.execute("INSERT INTO portfolio (stock_id, avg_cost, shares, is_etf) VALUES (?, ?, ?, ?)",
-                   [body.stock_id, body.cost, body.shares, body.is_etf])
+                   [body.stock_id, body.cost, body.shares, body.is_etf], read_only=False)
     event_bus.broadcast("portfolio_update")
     return api_response({"status": "success", "id": lid})
 
@@ -367,12 +368,12 @@ def delete_lot(lot_id: str):
         sid = row[0]
         del_shares = int(row[1])
         del_cost = float(row[2])
-        db.execute("DELETE FROM lots WHERE id = ?", [lot_id])
+        db.execute("DELETE FROM lots WHERE id = ?", [lot_id], read_only=False)
         # Recalculate portfolio from remaining lots
         remaining = db.execute("SELECT SUM(shares), AVG(cost) FROM lots WHERE stock_id = ?", [sid]).fetchone()
         if remaining and remaining[0]:
             db.execute("UPDATE portfolio SET shares = ?, avg_cost = ? WHERE stock_id = ?",
-                       [int(remaining[0]), float(remaining[1]), sid])
+                       [int(remaining[0]), float(remaining[1]), sid], read_only=False)
         else:
             # Revert portfolio: subtract the deleted lot
             existing = db.execute("SELECT shares, avg_cost FROM portfolio WHERE stock_id = ?", [sid]).fetchone()
@@ -383,9 +384,9 @@ def delete_lot(lot_id: str):
                 if new_shares > 0:
                     new_avg = (old_avg * old_shares - del_cost * del_shares) / new_shares
                     db.execute("UPDATE portfolio SET shares = ?, avg_cost = ? WHERE stock_id = ?",
-                               [new_shares, new_avg, sid])
+                               [new_shares, new_avg, sid], read_only=False)
                 else:
-                    db.execute("DELETE FROM portfolio WHERE stock_id = ?", [sid])
+                    db.execute("DELETE FROM portfolio WHERE stock_id = ?", [sid], read_only=False)
         event_bus.broadcast("portfolio_update")
     return api_response({"status": "success"})
 
