@@ -19,6 +19,7 @@ dependencies = [
     "scipy>=1.12.0",
     "sqlalchemy>=2.0.50",
     "psycopg2-binary>=2.9.10",
+    "python-multipart>=0.0.9",
     "websockets>=12.0",
     "yfinance>=0.2.0",
 ]

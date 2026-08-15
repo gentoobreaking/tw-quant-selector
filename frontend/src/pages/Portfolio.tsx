@@ -276,6 +276,35 @@ export default function Portfolio() {
     }
   };
 
+  const exportPortfolio = async () => {
+    try {
+        const res = await fetch(`${API}/api/v1/portfolio/export`, { method: 'POST' });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.detail || '匯出失敗');
+        addToast(`匯出完成：${json.data?.exported || 0} 檔持倉`, 'low');
+    } catch (e: any) {
+        addToast(`匯出失敗：${e.message}`, 'medium');
+    }
+  };
+
+  const importPortfolio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append('file', file);
+    try {
+        const res = await fetch(`${API}/api/v1/portfolio/import`, { method: 'POST', body: form });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.detail || '匯入失敗');
+        await refreshPortfolio();
+        addToast(`匯入完成：${json.data?.imported || 0} 檔持倉`, 'low');
+    } catch (e: any) {
+        addToast(`匯入失敗：${e.message}`, 'medium');
+    } finally {
+        e.target.value = '';
+    }
+  };
+
   const holdingsWithPrice = holdings.map(h => ({
     ...h,
     current_price: prices[h.stock_id]?.close ?? h.current_price
@@ -389,7 +418,16 @@ export default function Portfolio() {
         }}
       />
 
-      <h2 className={styles.sectionTitle}>持倉 Holdings</h2>
+      <h2 className={`${styles.sectionTitle} ${styles.holdingsHeader}`}>
+        <span>持倉 Holdings</span>
+        <span className={styles.holdingsActions}>
+          <label className={styles.actionBtn}>
+            📥<input type="file" accept=".csv,.json" onChange={importPortfolio} style={{ display: 'none' }} />
+            匯入
+          </label>
+          <button className={styles.actionBtn} onClick={exportPortfolio}>📤 匯出 JSON</button>
+        </span>
+      </h2>
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead>

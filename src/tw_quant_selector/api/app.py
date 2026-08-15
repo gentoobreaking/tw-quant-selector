@@ -12,7 +12,7 @@ import threading
 import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Query, HTTPException, Response, Body, Path as FPath, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, HTTPException, Response, Body, Path as FPath, Request, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -338,6 +338,88 @@ def delete_portfolio_stock(stock_id: str):
     db.execute("DELETE FROM portfolio WHERE stock_id = ?", [stock_id], read_only=False)
     event_bus.broadcast("portfolio_update")
     return api_response({"status": "success"})
+
+@app.post("/api/v1/portfolio/export")
+def export_portfolio_endpoint():
+    """Export current holdings DB -> .stock_monitor.json + stock_monitor.csv.
+
+    Delegates to scripts/export_portfolio.export_portfolio() (uses its own
+    write-enabled Database session)."""
+    import json as _json
+    from pathlib import Path
+    try:
+        from scripts.export_portfolio import export_portfolio
+        export_portfolio()
+        # export_portfolio writes .stock_monitor.json at repo root
+        root = Path.cwd()
+        jp = root / ".stock_monitor.json"
+        exported = 0
+        if jp.exists():
+            exported = len(_json.loads(jp.read_text(encoding="utf-8")))
+        event_bus.broadcast("portfolio_update")
+        return api_response({"status": "success", "exported": exported})
+    except Exception as e:
+        log.error("portfolio_export_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/portfolio/import")
+def import_portfolio_endpoint(file: UploadFile = File(...)):
+    """Import holdings from an uploaded .csv or .json, upserting into the DB.
+
+    CSV → delegates to scripts/sync_portfolio_csv.convert_csv_to_json()
+    (writes DB + a temp JSON). JSON → parsed and upserted via the app db."""
+    import tempfile, json, csv as _csv
+    from pathlib import Path
+
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in (".csv", ".json"):
+        raise HTTPException(400, "file must be .csv or .json")
+
+    raw = file.file.read()
+    tmp_out = Path(tempfile.mkdtemp()) / ".stock_monitor.json"
+
+    try:
+        if suffix == ".csv":
+            # Write the uploaded CSV to a temp file and reuse the existing importer
+            tmp_csv = Path(tempfile.mkstemp(suffix=".csv")[1])
+            tmp_csv.write_bytes(raw)
+            from scripts.sync_portfolio_csv import convert_csv_to_json
+            convert_csv_to_json(str(tmp_csv), str(tmp_out))
+            holdings = json.loads(tmp_out.read_text(encoding="utf-8")) if tmp_out.exists() else []
+        else:
+            holdings = json.loads(raw.decode("utf-8"))
+            # Persist JSON mirror alongside DB update
+            tmp_out.parent.mkdir(parents=True, exist_ok=True)
+            tmp_out.write_text(json.dumps(holdings, indent=2, ensure_ascii=False), encoding="utf-8")
+            # Upsert each holding via the app db (write-enabled per-statement)
+            for h in holdings:
+                sid = h["stock_id"]
+                avg_cost = float(h.get("avg_cost", 0))
+                shares = int(h.get("shares", 0))
+                is_etf = bool(h.get("is_etf", False))
+                pl_pct = h.get("pl_pct_thod")
+                pl_thod = h.get("pl_thod")
+                alert_enabled = h.get("alert_enabled", True) if h.get("alert_enabled") is not None else True
+                db.execute("""
+                    INSERT INTO portfolio (stock_id, avg_cost, shares, is_etf, pl_pct_thod, pl_thod, alert_enabled)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (stock_id) DO UPDATE SET
+                        avg_cost = EXCLUDED.avg_cost,
+                        shares = EXCLUDED.shares,
+                        is_etf = EXCLUDED.is_etf,
+                        pl_pct_thod = EXCLUDED.pl_pct_thod,
+                        pl_thod = EXCLUDED.pl_thod,
+                        alert_enabled = EXCLUDED.alert_enabled,
+                        updated_at = CURRENT_TIMESTAMP
+                """, [sid, avg_cost, shares, is_etf, pl_pct, pl_thod, alert_enabled], read_only=False)
+
+        event_bus.broadcast("portfolio_update")
+        return api_response({"status": "success", "imported": len(holdings)})
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("portfolio_import_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/v1/lots")
 def get_lots():
