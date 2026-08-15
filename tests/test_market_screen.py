@@ -15,9 +15,14 @@ from tw_quant_selector.api.websocket_manager import AlertWebSocketManager
 
 @pytest.fixture(scope="module")
 def app_client():
+    # Fresh import with the Database class mocked (routes use the app module's
+    # global `db`), then force-replace `db` so this works even if another test
+    # file already imported the app module with a real Database.
     with patch("tw_quant_selector.data.database.Database"):
         from tw_quant_selector.api import app as app_module
 
+    db_mock = MagicMock()
+    with patch.object(app_module, "db", db_mock):
         client = TestClient(app_module.app)
         yield client, app_module
 
