@@ -2169,6 +2169,10 @@ def factor_quintile_returns(days: int = 730):
     df = df.dropna(subset=["score", "cur_close", "fut_close"])
     if df.empty:
         return api_response([])
+    # DECIMAL(8,4) 欄位在 PostgreSQL 回讀時是 Decimal；np.quantile 不接受 Decimal * float
+    df["score"] = df["score"].astype(float)
+    df["cur_close"] = df["cur_close"].astype(float)
+    df["fut_close"] = df["fut_close"].astype(float)
     df["future_return"] = (df["fut_close"] - df["cur_close"]) / df["cur_close"]
     df["quintile"] = df.groupby(["signal_date", "strategy"])["score"].transform(
         lambda g: pd.qcut(g, 5, labels=False, duplicates="drop")
@@ -2191,6 +2195,8 @@ def factor_correlation():
     df = pd.DataFrame(rows, columns=["stock_id", "strategy", "score"])
     if df.empty:
         return api_response({})
+    # score 為 DECIMAL(8,4)，轉 float 避免 np.corrcoef 隱式轉換時炸
+    df["score"] = df["score"].astype(float)
     pivot = df.pivot_table(index="stock_id", columns="strategy", values="score")
     corr = pivot.corr()
     strategies = list(corr.columns)

@@ -1,0 +1,3 @@
+[submodule "tw-quant-mcp"]
+	path = tw-quant-mcp
+	url = ../tw-quant-mcp

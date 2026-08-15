@@ -7,18 +7,14 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# === Stage 2: Build tw-quant-mcp (Go) ===
-FROM golang:1.22-alpine AS mcp-builder
+# === Stage 2: Build tw-quant-mcp ===
+FROM golang:1.26.6-alpine3.24 AS mcp-builder
 
 WORKDIR /app/tw-quant-mcp
-# 假設 tw-quant-mcp 為 sibling project；CI 觸發前需先 push 或用 submodule
-# 若專案不存在可改為 ARG TW_QUANT_MCP_SRC=...；此處以 ./tw-quant-mcp 為預設路徑
-COPY tw-quant-mcp/go.mod tw-quant-mcp/go.sum* ./
-RUN go mod download || true
+COPY tw-quant-mcp/go.mod tw-quant-mcp/go.sum ./
+RUN go mod download
 COPY tw-quant-mcp/ ./
-RUN CGO_ENABLED=0 go build -ldflags "-X main.version=docker" -o /tw-quant-mcp ./cmd/mcp-server || \
-    echo "WARN: tw-quant-mcp build skipped (source not present)" && \
-    cp /dev/null /tw-quant-mcp
+RUN CGO_ENABLED=0 go build -ldflags "-X main.version=docker" -o /tw-quant-mcp ./cmd/mcp-server
 
 # === Stage 3: Python API + Serve Static ===
 FROM python:3.12-slim
