@@ -109,6 +109,11 @@ def run_realtime_polling_task():
             result = poll_realtime(polling_db, all_stocks, key_stock_ids=holdings + ["0050", "2330"])
             log.info("realtime.poll_result", status=result.get("status"), count=result.get("count"))
 
+            # Notify SSE watchers (e.g. Portfolio) that live prices changed so
+            # they can refresh holdings against realtime_quotes.
+            if result.get("count", 0) > 0:
+                event_bus.broadcast("realtime_price_update")
+
             if time.time() - last_snapshot_time > snapshot_interval:
                 save_intraday_snapshot(polling_db, all_stocks)
                 last_snapshot_time = time.time()
@@ -1013,50 +1018,40 @@ def stocks_prices(
         raise HTTPException(400, "No stock IDs provided")
     
     if realtime:
-        # 從 realtime_prices 表讀取即時價格（PostgreSQL）
+        # Realtime quotes live in the `realtime_quotes` table, populated by the
+        # background poll (poll_realtime). Prefer the latest intraday quote per
+        # stock; fall back to the daily close if realtime data is unavailable.
         try:
-            from sqlalchemy import text
-            with db.connection(read_only=True) as session:
-                # 檢查 realtime_prices 表是否存在
-                check = session.execute(text("""
-                    SELECT EXISTS (
-                        SELECT FROM information_schema.tables 
-                        WHERE table_name = 'realtime_prices'
-                    );
-                """)).scalar()
-                
-                if check:
-                    # 有 realtime_prices 表：JOIN 即時價格
-                    placeholders = ",".join([f":id{i}" for i in range(len(stock_ids))])
-                    params = {f"id{i}": sid for i, sid in enumerate(stock_ids)}
-                    query = text(f"""
-                        SELECT 
-                            COALESCE(rt.stock_id, dp.stock_id) as stock_id,
-                            s.stock_name,
-                            COALESCE(rt.close, dp.close) as close,
-                            COALESCE(rt.trade_date, dp.trade_date) as trade_date
-                        FROM daily_prices dp
-                        JOIN stocks s ON s.stock_id = dp.stock_id
-                        LEFT JOIN realtime_prices rt ON rt.stock_id = dp.stock_id
-                        WHERE dp.stock_id IN ({placeholders})
-                        AND dp.trade_date = (
-                            SELECT MAX(trade_date) FROM daily_prices WHERE stock_id = dp.stock_id
-                        )
-                    """)
-                    rows = session.execute(query, params).fetchall()
-                else:
-                    # 無 realtime_prices 表：fallback 到 daily_prices
-                    raise Exception("realtime_prices table not found")
-            
+            placeholders = ",".join([f":id{i}" for i in range(len(stock_ids))])
+            params = {f"id{i}": sid for i, sid in enumerate(stock_ids)}
+            rows = db.execute(f"""
+                SELECT s.stock_id, s.stock_name, rq.price, rq.change_pct, rq.quote_time
+                FROM stocks s
+                LEFT JOIN LATERAL (
+                    SELECT price, change_pct, quote_time
+                    FROM realtime_quotes
+                    WHERE stock_id = s.stock_id
+                    ORDER BY quote_time DESC, is_close ASC LIMIT 1
+                ) rq ON TRUE
+                WHERE s.stock_id IN ({placeholders})
+            """, params).fetchall()
             result = {}
+            have_rt = False
             for r in rows:
-                result[r[0]] = {"name": r[1], "close": float(r[2]) if r[2] is not None else None, "date": str(r[3]) if r[3] else None}
-            return api_response(result)
-            
+                if r[2] is not None:
+                    have_rt = True
+                result[r[0]] = {
+                    "name": str(r[1]) if r[1] else "",
+                    "close": float(r[2]) if r[2] is not None else None,
+                    "change_pct": float(r[3]) if r[3] is not None else None,
+                    "date": str(r[4]) if r[4] else None,
+                }
+            if have_rt:
+                return api_response(result)
         except Exception as e:
-            log.warning("fallback_to_daily_prices", error=str(e))
-            # fallback to daily prices
-    
+            log.warning("stocks_prices.realtime_failed", error=str(e))
+        # Fallback: none of the realtime paths yielded prices → use daily closes
+
     # 原始邏輯：從 daily_prices 讀取
     placeholders = ",".join(["?"] * len(stock_ids))
     rows = db.execute(
