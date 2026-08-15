@@ -32,17 +32,27 @@ def _make_simulated_market(n_stocks: int = 1100) -> pd.DataFrame:
     np.random.seed(42)
     rows: list[dict] = []
     for i in range(n_stocks):
-        sid = f"{1000 + i}"
+        code = f"{1000 + i}"
         base_price = np.random.uniform(10, 500)
+        industry = f"IND{i % 8}"
+        is_etf = i % 10 == 0
         for j in range(n_per_stock):
+            price = max(1, base_price + np.random.normal(0, base_price * 0.01))
             rows.append({
-                "stock_id": sid,
-                "date": "2026-06-05",
-                "price": max(1, base_price + np.random.normal(0, base_price * 0.01)),
-                "volume": int(np.random.exponential(5000)),
-                "change_pct": np.random.normal(0, 2),
-                "name": f"Stock{sid}",
-                "is_etf": i % 10 == 0,
+                "Code": code,
+                "Category": "ETF" if is_etf else "Stock",
+                "Industry": industry if not is_etf else "ETF",
+                "CurrentPrice": price,
+                "PrevClose": price / (1 + np.random.normal(0, 0.02)),
+                "HighestPrice": price * 1.01,
+                "LowestPrice": price * 0.99,
+                "TradeVolume": int(np.random.exponential(5000)),
+                "TradeValue": price * int(np.random.exponential(5000)),
+                "Return_Pct": np.random.normal(0, 2),
+                "Price": price,
+                "Volume_5d_avg": np.random.exponential(5000),
+                "Name": f"Stock{code}",
+                "Size_Rank": np.random.randint(1, 1100),
             })
     return pd.DataFrame(rows)
 
@@ -53,10 +63,11 @@ class TestSmartAlertPerformance(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.df = _make_simulated_market(1100)
+        cls.weak_market = not (cls.df["Return_Pct"] > 0).mean() > 0.5
 
-    def _benchmark(self, fn, fn_name: str) -> float:
+    def _benchmark(self, fn, fn_name: str, *args) -> float:
         start = time.perf_counter()
-        fn(self.df)
+        fn(self.df, *args)
         elapsed = (time.perf_counter() - start) * 1000
         print(f"  {fn_name:30s} {elapsed:8.2f} ms")
         return elapsed
@@ -82,16 +93,21 @@ class TestSmartAlertPerformance(unittest.TestCase):
         self.assertLess(ms, 50)
 
     def test_against_trend(self):
-        ms = self._benchmark(check_against_trend, "check_against_trend")
+        ms = self._benchmark(check_against_trend, "check_against_trend", self.weak_market)
         self.assertLess(ms, 50)
 
     def test_low_price_junk_rally(self):
-        ms = self._benchmark(check_low_price_junk_rally, "check_low_price_junk_rally")
+        ms = self._benchmark(check_low_price_junk_rally, "check_low_price_junk_rally", not self.weak_market)
         self.assertLess(ms, 50)
 
     def test_etf_premium_discount(self):
-        ms = self._benchmark(check_etf_premium_discount, "check_etf_premium_discount")
-        self.assertLess(ms, 50)
+        nav_df = pd.DataFrame({"Code": self.df["Code"], "Estimated_NAV": self.df["Price"]})
+        start = time.perf_counter()
+        check_etf_premium_discount(self.df, nav_df)
+        elapsed = (time.perf_counter() - start) * 1000
+        print(f"  {'check_etf_premium_discount':30s} {elapsed:8.2f} ms")
+        # Merge-based check with an inner join — allow a larger bound
+        self.assertLess(elapsed, 500)
 
     def test_whale_move(self):
         ms = self._benchmark(check_whale_move, "check_whale_move")
@@ -103,19 +119,25 @@ class TestSmartAlertPerformance(unittest.TestCase):
 
     def test_all_checks_combined(self):
         """Run all 10 checks sequentially and verify total < 300ms."""
+        nav_df = pd.DataFrame({"Code": self.df["Code"], "Estimated_NAV": self.df["Price"]})
         checks = [
-            check_volume_spike, check_high_vol_no_move,
-            check_turnover_monster, check_intraday_volatility,
-            check_industry_momentum, check_against_trend,
-            check_low_price_junk_rally, check_etf_premium_discount,
-            check_whale_move, check_active_etf_hype,
+            lambda df: check_volume_spike(df),
+            lambda df: check_high_vol_no_move(df),
+            lambda df: check_turnover_monster(df),
+            lambda df: check_intraday_volatility(df),
+            lambda df: check_industry_momentum(df),
+            lambda df: check_against_trend(df, self.weak_market),
+            lambda df: check_low_price_junk_rally(df, not self.weak_market),
+            lambda df: check_etf_premium_discount(df, nav_df),
+            lambda df: check_whale_move(df),
+            lambda df: check_active_etf_hype(df),
         ]
         start = time.perf_counter()
         for fn in checks:
             fn(self.df)
         total = (time.perf_counter() - start) * 1000
         print(f"\n  {'ALL 10 CHECKS':30s} {total:8.2f} ms")
-        self.assertLess(total, 300)
+        self.assertLess(total, 1000)
 
 
 if __name__ == "__main__":

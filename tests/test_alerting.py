@@ -1,10 +1,17 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from datetime import datetime, timedelta
+from datetime import date as date_cls, datetime, timedelta
 import json
 import uuid
 
 from tw_quant_selector.monitoring.alerting import AlertManager, AlertChecker, format_alert
+
+
+class _FakeDate(date_cls):
+    """date subclass pinned to a weekday so institutional checks don't skip."""
+    @classmethod
+    def today(cls):
+        return cls(2026, 6, 4)  # Thursday
 
 class TestAlerting(unittest.TestCase):
     def setUp(self):
@@ -95,18 +102,19 @@ class TestAlerting(unittest.TestCase):
     @patch.object(AlertChecker, "_check_cooldown", return_value=True)
     @patch.object(AlertManager, "send_notification")
     def test_inst_heavy_buy_triggers(self, mock_send, mock_cooldown):
-        with patch.object(self.checker, "_get_todays_picks",
-                          return_value=[{"stock_id": "2330", "stock_name": "台積電", "score": 1.5}]):
-            with patch.object(self.checker, "_get_portfolio_stocks", return_value=[]):
-                with patch.object(self.checker, "_get_recent_flows",
-                                  return_value={"2330": [{"foreign_investors_net": 100_000_000}]}):
-                    with patch.object(self.checker, "_get_shares_outstanding",
-                                      return_value={"2330": 10_000_000_000}):
-                        self.checker.check_institutional_alerts()
-                        args = self.db.execute.call_args_list
-                        hist_calls = [a for a in args if "INSERT INTO alert_history" in str(a)]
-                        self.assertTrue(any("INST_HEAVY_BUY" in str(a) for a in hist_calls),
-                                        "INST_HEAVY_BUY should be logged")
+        with patch("tw_quant_selector.monitoring.institutional_checker.date", _FakeDate):
+            with patch.object(self.checker, "_get_todays_picks",
+                              return_value=[{"stock_id": "2330", "stock_name": "台積電", "score": 1.5}]):
+                with patch.object(self.checker, "_get_portfolio_stocks", return_value=[]):
+                    with patch.object(self.checker, "_get_recent_flows",
+                                      return_value={"2330": [{"foreign_investors_net": 100_000_000}]}):
+                        with patch.object(self.checker, "_get_shares_outstanding",
+                                          return_value={"2330": 10_000_000_000}):
+                            self.checker.check_institutional_alerts()
+                            args = self.db.execute.call_args_list
+                            hist_calls = [a for a in args if "INSERT INTO alert_history" in str(a)]
+                            self.assertTrue(any("INST_HEAVY_BUY" in str(a) for a in hist_calls),
+                                            "INST_HEAVY_BUY should be logged")
 
     @patch.object(AlertChecker, "_check_cooldown", return_value=True)
     @patch.object(AlertManager, "send_notification")
@@ -127,58 +135,61 @@ class TestAlerting(unittest.TestCase):
     @patch.object(AlertChecker, "_check_cooldown", return_value=True)
     @patch.object(AlertManager, "send_notification")
     def test_inst_heavy_sell(self, mock_send, mock_cooldown):
-        with patch.object(self.checker, "_get_todays_picks", return_value=[]):
-            with patch.object(self.checker, "_get_portfolio_stocks", return_value=["2330"]):
-                with patch.object(self.checker, "_get_recent_flows",
-                                  return_value={"2330": [
-                                      {"foreign_investors_net": -100},
-                                      {"foreign_investors_net": -200},
-                                      {"foreign_investors_net": -300},
-                                      {"foreign_investors_net": -400},
-                                      {"foreign_investors_net": -500},
-                                      {"foreign_investors_net": 50},
-                                  ]}):
-                    self.checker.check_institutional_alerts()
+        with patch("tw_quant_selector.monitoring.institutional_checker.date", _FakeDate):
+            with patch.object(self.checker, "_get_todays_picks", return_value=[]):
+                with patch.object(self.checker, "_get_portfolio_stocks", return_value=["2330"]):
+                    with patch.object(self.checker, "_get_recent_flows",
+                                      return_value={"2330": [
+                                          {"foreign_investors_net": -100},
+                                          {"foreign_investors_net": -200},
+                                          {"foreign_investors_net": -300},
+                                          {"foreign_investors_net": -400},
+                                          {"foreign_investors_net": -500},
+                                          {"foreign_investors_net": 50},
+                                      ]}):
+                        self.checker.check_institutional_alerts()
                     args = [str(a) for a in self.db.execute.call_args_list]
                     self.assertTrue(any("INST_HEAVY_SELL" in a for a in args))
 
     @patch.object(AlertChecker, "_check_cooldown", return_value=True)
     @patch.object(AlertManager, "send_notification")
     def test_inst_divergence(self, mock_send, mock_cooldown):
-        with patch.object(self.checker, "_get_todays_picks",
+        with patch("tw_quant_selector.monitoring.institutional_checker.date", _FakeDate):
+            with patch.object(self.checker, "_get_todays_picks",
                           return_value=[{"stock_id": "2330", "stock_name": "台積電", "score": 1.5}]):
-            with patch.object(self.checker, "_get_portfolio_stocks", return_value=[]):
-                with patch.object(self.checker, "_get_recent_flows",
-                                  return_value={"2330": [
-                                      {"foreign_investors_net": -100},
-                                      {"foreign_investors_net": -200},
-                                      {"foreign_investors_net": -300},
-                                      {"foreign_investors_net": 50},
-                                  ]}):
-                    self.checker.check_institutional_alerts()
+                with patch.object(self.checker, "_get_portfolio_stocks", return_value=[]):
+                    with patch.object(self.checker, "_get_recent_flows",
+                                      return_value={"2330": [
+                                          {"foreign_investors_net": -100},
+                                          {"foreign_investors_net": -200},
+                                          {"foreign_investors_net": -300},
+                                          {"foreign_investors_net": 50},
+                                      ]}):
+                        self.checker.check_institutional_alerts()
                     args = [str(a) for a in self.db.execute.call_args_list]
                     self.assertTrue(any("INST_DIVERGENCE" in a for a in args))
 
     @patch.object(AlertChecker, "_check_cooldown", return_value=True)
     @patch.object(AlertManager, "send_notification")
     def test_inst_consec_buy(self, mock_send, mock_cooldown):
-        with patch.object(self.checker, "_get_todays_picks", return_value=[]):
-            with patch.object(self.checker, "_get_portfolio_stocks", return_value=["2330"]):
-                with patch.object(self.checker, "_get_recent_flows",
-                                  return_value={"2330": [
-                                      {"total_net": 100},
-                                      {"total_net": 200},
-                                      {"total_net": 300},
-                                      {"total_net": 400},
-                                      {"total_net": 500},
-                                      {"total_net": 600},
-                                      {"total_net": 700},
-                                      {"total_net": 800},
-                                      {"total_net": 900},
-                                      {"total_net": 1000},
-                                      {"total_net": 50},
-                                  ]}):
-                    self.checker.check_institutional_alerts()
+        with patch("tw_quant_selector.monitoring.institutional_checker.date", _FakeDate):
+            with patch.object(self.checker, "_get_todays_picks", return_value=[]):
+                with patch.object(self.checker, "_get_portfolio_stocks", return_value=["2330"]):
+                    with patch.object(self.checker, "_get_recent_flows",
+                                      return_value={"2330": [
+                                          {"total_net": 100},
+                                          {"total_net": 200},
+                                          {"total_net": 300},
+                                          {"total_net": 400},
+                                          {"total_net": 500},
+                                          {"total_net": 600},
+                                          {"total_net": 700},
+                                          {"total_net": 800},
+                                          {"total_net": 900},
+                                          {"total_net": 1000},
+                                          {"total_net": 50},
+                                      ]}):
+                        self.checker.check_institutional_alerts()
                     args = [str(a) for a in self.db.execute.call_args_list]
                     self.assertTrue(any("INST_CONSEC_BUY" in a for a in args))
 
@@ -474,7 +485,7 @@ class TestSmartAlertIntegration(unittest.TestCase):
         self.db = MagicMock()
         self.checker = AlertChecker(self.db)
 
-    @patch("tw_quant_selector.monitoring.alerting.check_volume_spike")
+    @patch("tw_quant_selector.monitoring.smart_checker.check_volume_spike")
     @patch.object(AlertChecker, "_build_smart_alert_df")
     def test_check_all_smart_alerts_calls_checks(self, mock_build, mock_vol):
         mock_build.return_value = _make_df([
