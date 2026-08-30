@@ -6,13 +6,13 @@ T104: SQLAlchemy ORM Models
 from sqlalchemy import (
     Column, String, Date, DateTime, Boolean, Numeric, Integer,
     Text, PrimaryKeyConstraint, Index, ForeignKey, Sequence,
-    DECIMAL, BIGINT, TIMESTAMP,
+    DECIMAL, BIGINT, TIMESTAMP, MetaData,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 
-Base = declarative_base()
+Base = declarative_base(metadata=MetaData(schema="selector"))
 Base.metadata.naming_convention = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",

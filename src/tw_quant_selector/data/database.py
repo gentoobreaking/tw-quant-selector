@@ -28,16 +28,21 @@ log = structlog.get_logger()
 # ============================================================
 # 配置
 # ============================================================
-DEFAULT_DB_URL = (
-    "postgresql+psycopg2://{user}:{passwd}@{host}:5432/{db}"
-    .format(
-        user=os.getenv("POSTGRES_USER", "tw-quant"),
-        passwd=os.getenv("POSTGRES_PASSWORD", "tw-quant-PassWd"),
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        db=os.getenv("POSTGRES_DB", "tw_quant"),
-    )
-)
 
+# 支援 DATABASE_URL 環境變數 (T002: switch to shared PostgreSQL)
+_database_url = os.environ.get("DATABASE_URL")
+if _database_url:
+    DEFAULT_DB_URL = _database_url
+else:
+    DEFAULT_DB_URL = (
+        "postgresql+psycopg2://{user}:{passwd}@{host}:5432/{db}"
+        .format(
+            user=os.getenv("POSTGRES_USER", "twquant"),
+            passwd=os.getenv("POSTGRES_PASSWORD", "twquant-secret-password"),
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            db=os.getenv("POSTGRES_DB", "twquant_shared"),
+        )
+    )
 ALLOWED_TABLES: frozenset[str] = frozenset({
     "stocks",
     "daily_prices",
@@ -154,6 +159,7 @@ def get_engine(db_url: Optional[str] = None, echo: bool = False):
                 pool_size=5,
                 max_overflow=5,
                 pool_recycle=3600,
+                connect_args={"options": "-c search_path=selector,core,pickup"},
             )
             # 创建所有表（若尚未存在）
             Base.metadata.create_all(_engine)
@@ -211,7 +217,10 @@ class Database:
                 max_overflow=5,
                 pool_recycle=3600,
                 pool_timeout=30,
-                connect_args={"connect_timeout": 10},
+                connect_args={
+                    "connect_timeout": 10,
+                    "options": "-c search_path=selector,core,pickup",
+                },
             )
         return self._engine
 
@@ -454,15 +463,30 @@ class Database:
     def init_db(self):
         """
         初始化数据库（创建所有表）
-        PostgreSQL 用 Base.metadata.create_all()，不会重复创建已存在的表
+
+        T002: When using shared PostgreSQL (DATABASE_URL set or default is postgresql://),
+        selector tables should already exist in selector.* schema. Skip create_all to
+        avoid FK resolution issues (core.stocks uses 'symbol', selector.stocks uses 'stock_id').
         """
         engine = self._get_engine()
-        Base.metadata.create_all(engine)
-        from sqlalchemy import text as sql_text
-        with engine.connect() as conn:
-            conn.execute(sql_text("ALTER TABLE backtest_runs ADD COLUMN IF NOT EXISTS benchmark VARCHAR(10) DEFAULT '0050'"))
-            conn.commit()
-        log.info("database.init_db_success")
+
+        from sqlalchemy import inspect, text as sql_text
+        inspector = inspect(engine)
+        existing = set(inspector.get_table_names(schema="selector"))
+
+        if "stocks" not in existing:
+            # First-time setup: create tables in selector schema
+            Base.metadata.create_all(engine, checkfirst=True)
+            with engine.connect() as conn:
+                conn.execute(sql_text("ALTER TABLE selector.backtest_runs ADD COLUMN IF NOT EXISTS benchmark VARCHAR(10) DEFAULT '0050'"))
+                conn.commit()
+            log.info("database.init_db_success")
+        else:
+            # Tables already exist (shared PostgreSQL) — just ensure backtest_runs has benchmark column
+            with engine.connect() as conn:
+                conn.execute(sql_text("ALTER TABLE selector.backtest_runs ADD COLUMN IF NOT EXISTS benchmark VARCHAR(10) DEFAULT '0050'"))
+                conn.commit()
+            log.info("database.init_db_skip: selector.stocks already exists")
 
     def change_path(self, new_url: str):
         """
