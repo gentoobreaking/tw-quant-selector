@@ -15,6 +15,8 @@ stock_id, avg_cost, shares, is_etf, pl_pct_thod, pl_thod, alert_enabled
 0050, 89.21, 1303, TRUE, 10, 10000, TRUE
 ```
 
+> **注意**：CSV 使用 `pl_pct_thod`/`pl_thod` 作為欄位名稱（這是監控腳本的內部格式），但資料庫實際的 SQL 欄位名稱為 `pl_pct_tsd`/`pl_tsd`。同步腳本會自動處理對應。
+
 | 欄位 | 說明 |
 |------|------|
 | `stock_id` | 股票代碼 |
@@ -28,14 +30,14 @@ stock_id, avg_cost, shares, is_etf, pl_pct_thod, pl_thod, alert_enabled
 執行同步（寫入 PostgreSQL）：
 
 ```bash
-cd /Users/claw/Projects/tw-quant-selector
+cd /Users/david/Projects/tw-quant-selector
 docker compose exec app python3 scripts/sync_portfolio_csv.py
 ```
 
 啟動即時監控：
 
 ```bash
-docker compose exec app python3 scripts/check_live_alerts.py
+docker compose exec -T app python3 scripts/check_live_alerts.py
 ```
 
 > ⚠️ **注意**：資料已從 DuckDB 遷移至 PostgreSQL，所有腳本現在直接操作 PostgreSQL，不再需要 `.duckdb` 檔案。
@@ -75,7 +77,7 @@ docker compose exec app python3 scripts/export_portfolio.py
 3. **啟動即時監控**：
 
 ```bash
-docker compose exec app python3 scripts/check_live_alerts.py
+docker compose exec -T app python3 scripts/check_live_alerts.py
 ```
 
 ---
@@ -88,7 +90,7 @@ docker compose exec app python3 scripts/check_live_alerts.py
 
 ```cron
 # 週一至五 09:00 - 13:40 執行
-*/10 9-13 * * 1-5 cd /Users/claw/Projects/tw-quant-selector && docker compose exec -T app python3 scripts/check_live_alerts.py >> ~/logs/live_alerts.log 2>&1
+*/10 9-13 * * 1-5 cd /Users/david/Projects/tw-quant-selector && docker compose exec -T app python3 scripts/check_live_alerts.py >> ~/logs/live_alerts.log 2>&1
 ```
 
 > Docker 環境下使用 `docker compose exec -T`（無 TTY）來支援 cron 的非互動執行。
@@ -99,10 +101,10 @@ docker compose exec app python3 scripts/check_live_alerts.py
 
 ### 告警門檻
 
-- **報酬率門檻** (`pl_pct_thod`): 預設 `5.0` (%)
-- **損益金額門檻** (`pl_thod`): 預設 `50000` (元)
+- **報酬率門檻** (`pl_pct_tsd`): 預設 `5.0` (%)
+- **損益金額門檻** (`pl_tsd`): 預設 `50000` (元)
 
-可在 `stock_monitor.csv` 中針對個別持倉設定，或直接修改 `portfolio` 表的 `pl_pct_thod` / `pl_percent_threshold` 欄位。
+可在 `stock_monitor.csv` 中針對個別持倉設定，或直接修改 `portfolio` 表的 `pl_pct_tsd` / `pl_tsd` 欄位。
 
 ### 通知管道
 
@@ -121,17 +123,19 @@ docker compose exec app python3 scripts/check_live_alerts.py
 
 | 項目 | 舊（DuckDB） | 新（PostgreSQL） |
 |------|-------------|-----------------|
-| 主資料庫 | `data/tw_quant.duckdb` | PostgreSQL (`DB_*` env) |
+| 主資料庫 | `data/tw_quant.duckdb` | PostgreSQL (`DATABASE_URL` env) |
 | 即時價格寫入 | DuckDB `ATTACH` + 專用 `.duckdb` 檔案 | PostgreSQL `realtime_prices` 表 |
 | CSV 同步語法 | `INSERT OR REPLACE` | `INSERT ... ON CONFLICT DO UPDATE` |
 | 占位符 | `?` (DuckDB style) | `:name` (SQLAlchemy named params) |
 | 腳本 Database 初始化 | `Database(DB_PATH)` | `Database()` |
+| 埠號 | 依賴本地 DuckDB 文件 | `host.docker.internal:5432` |
+| 即時通知 URL | `http://localhost:8080/api/v1/notify-realtime-update` | `http://localhost:5172/api/v1/notify-realtime-update` |
 
 ---
 
 ## 🗂️ 檔案說明
 
-- `src/tw_quant_selector/data/database.py` — PostgreSQL `Database` 類（自動轉換 `?` 占位符，兼容原始 SQL 字串）
+- `src/tw_quant_selector/data/database.py` — PostgreSQL `Database` 類
 - `scripts/sync_portfolio_csv.py` — 將 `stock_monitor.csv` 同步至 PostgreSQL `portfolio` 表
 - `scripts/export_portfolio.py` — 將 `portfolio` 表匯出至 `.stock_monitor.json` 供監控器使用
 - `scripts/check_live_alerts.py` — 核心監控邏輯，對接 TWSE 即時行情 API，即時價格寫入 `realtime_prices` 表
