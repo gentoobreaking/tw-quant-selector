@@ -6,8 +6,8 @@ services:
     build: .
     env_file: .env
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-health:
+        condition: service_started
     environment:
       - TZ=Asia/Taipei
       - PYTHONUNBUFFERED=1
@@ -72,23 +72,16 @@ services:
       - .:/app
     restart: unless-stopped
 
-  postgres:
+  postgres-health:
+    container_name: postgres-health
     image: postgres:16-alpine
-    container_name: postgres
-    hostname: postgres
     environment:
-      - POSTGRES_USER=tw-quant
-      - POSTGRES_PASSWORD=tw-quant-PassWd
-      - POSTGRES_DB=tw_quant
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tw-quant -d tw_quant"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_PORT: '5432'
+      PGUSER: twquant
+      PGDATABASE: twquant_shared
+    entrypoint:
+    - sh
+    - -c
+    - sh -c 'until pg_isready -h host.docker.internal -p 5432 -U twquant -d twquant_shared; do sleep 5; done'
+    restart: "no"
