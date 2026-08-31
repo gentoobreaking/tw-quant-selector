@@ -17,16 +17,16 @@ def convert_csv_to_json(csv_path: str, json_path: str):
         with open(csv_path, mode='r', encoding='utf-8') as f:
             reader = csv.DictReader(f, skipinitialspace=True)
             for row in reader:
-                pl_pct_raw = row.get("pl_pct_thod", "").strip()
-                pl_raw = row.get("pl_thod", "").strip()
+                pl_pct_val = row.get("pl_pct_thod", "").strip()
+                pl_val = row.get("pl_thod", "").strip()
                 alert_raw = row.get("alert_enabled", "").strip()
                 holding = {
                     "stock_id": row["stock_id"].strip(),
                     "avg_cost": float(row["avg_cost"].strip()),
                     "shares": int(row["shares"].strip()),
                     "is_etf": row["is_etf"].strip().upper() == "TRUE",
-                    "pl_pct_thod": float(pl_pct_raw) if pl_pct_raw else None,
-                    "pl_thod": float(pl_raw) if pl_raw else None,
+                    "pl_pct_tsd": float(pl_pct_val) if pl_pct_val else None,
+                    "pl_tsd": float(pl_val) if pl_val else None,
                     "alert_enabled": alert_raw.upper() != "FALSE" if alert_raw else True,
                     "market": "TSE" 
                 }
@@ -40,14 +40,14 @@ def convert_csv_to_json(csv_path: str, json_path: str):
         with db.connection() as conn:
             for h in holdings:
                 conn.execute("""
-                    INSERT INTO portfolio (stock_id, avg_cost, shares, is_etf, pl_pct_thod, pl_thod, alert_enabled)
-                    VALUES (:stock_id, :avg_cost, :shares, :is_etf, :pl_pct_thod, :pl_thod, :alert_enabled)
+                    INSERT INTO portfolio (stock_id, avg_cost, shares, is_etf, pl_pct_tsd, pl_tsd, alert_enabled)
+                    VALUES (:stock_id, :avg_cost, :shares, :is_etf, :pl_pct_tsd, :pl_tsd, :alert_enabled)
                     ON CONFLICT (stock_id) DO UPDATE SET
                         avg_cost = EXCLUDED.avg_cost,
                         shares = EXCLUDED.shares,
                         is_etf = EXCLUDED.is_etf,
-                        pl_pct_thod = EXCLUDED.pl_pct_thod,
-                        pl_thod = EXCLUDED.pl_thod,
+                        pl_pct_tsd = EXCLUDED.pl_pct_tsd,
+                        pl_tsd = EXCLUDED.pl_tsd,
                         alert_enabled = EXCLUDED.alert_enabled,
                         updated_at = CURRENT_TIMESTAMP
                 """, h)

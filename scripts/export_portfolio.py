@@ -54,7 +54,7 @@ def export_portfolio():
     
     rows = db.execute("""
         SELECT p.stock_id, p.avg_cost, p.shares, p.is_etf, s.market,
-               p.pl_pct_thod, p.pl_thod, p.alert_enabled
+               p.pl_pct_tsd, p.pl_tsd, p.alert_enabled
         FROM portfolio p
         LEFT JOIN stocks s ON p.stock_id = s.stock_id
     """).fetchall()

@@ -21,7 +21,7 @@ TWSE_API_URL = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
 REALTIME_PRICE_ENABLED = os.environ.get("REALTIME_PRICE_ENABLED", "true").lower() == "true"
 # REALTIME_DB_PATH no longer used (PostgreSQL uses a table instead)
 REALTIME_DB_PATH = None
-FASTAPI_NOTIFY_URL = "http://localhost:8000/api/v1/notify-realtime-update"
+FASTAPI_NOTIFY_URL = "http://localhost:5172/api/v1/notify-realtime-update"
 
 def fetch_live_prices(stocks: list[dict]) -> dict[str, float]:
     """Fetch live prices from TWSE MIS API."""
