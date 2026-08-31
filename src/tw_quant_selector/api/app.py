@@ -325,7 +325,7 @@ def update_portfolio_thresholds(stock_id: str, body: dict):
     pl_pct_thod = body.get("pl_pct_thod")
     alert_enabled = body.get("alert_enabled")
     db.execute(
-        """UPDATE portfolio SET pl_thod = ?, pl_pct_thod = ?, alert_enabled = ?
+        """UPDATE portfolio SET pl_tsd = ?, pl_pct_tsd = ?, alert_enabled = ?
            WHERE stock_id = ?""",
         [pl_thod, pl_pct_thod, alert_enabled if alert_enabled is not None else True, stock_id],
         read_only=False,
@@ -401,14 +401,14 @@ def import_portfolio_endpoint(file: UploadFile = File(...)):
                 pl_thod = h.get("pl_thod")
                 alert_enabled = h.get("alert_enabled", True) if h.get("alert_enabled") is not None else True
                 db.execute("""
-                    INSERT INTO portfolio (stock_id, avg_cost, shares, is_etf, pl_pct_thod, pl_thod, alert_enabled)
+                    INSERT INTO portfolio (stock_id, avg_cost, shares, is_etf, pl_pct_tsd, pl_tsd, alert_enabled)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT (stock_id) DO UPDATE SET
                         avg_cost = EXCLUDED.avg_cost,
                         shares = EXCLUDED.shares,
                         is_etf = EXCLUDED.is_etf,
-                        pl_pct_thod = EXCLUDED.pl_pct_thod,
-                        pl_thod = EXCLUDED.pl_thod,
+                        pl_pct_tsd = EXCLUDED.pl_pct_tsd,
+                        pl_tsd = EXCLUDED.pl_tsd,
                         alert_enabled = EXCLUDED.alert_enabled,
                         updated_at = CURRENT_TIMESTAMP
                 """, [sid, avg_cost, shares, is_etf, pl_pct, pl_thod, alert_enabled], read_only=False)
@@ -524,7 +524,7 @@ async def portfolio_events():
 def get_portfolio():
     rows = db.execute("""
         SELECT p.stock_id, p.avg_cost, p.shares, p.is_etf, s.market,
-               p.pl_pct_thod, p.pl_thod, p.alert_enabled,
+               p.pl_pct_tsd, p.pl_tsd, p.alert_enabled,
                s.stock_name
         FROM portfolio p
         LEFT JOIN stocks s ON p.stock_id = s.stock_id
@@ -2169,10 +2169,6 @@ def factor_quintile_returns(days: int = 730):
     df = df.dropna(subset=["score", "cur_close", "fut_close"])
     if df.empty:
         return api_response([])
-    # DECIMAL(8,4) 欄位在 PostgreSQL 回讀時是 Decimal；np.quantile 不接受 Decimal * float
-    df["score"] = df["score"].astype(float)
-    df["cur_close"] = df["cur_close"].astype(float)
-    df["fut_close"] = df["fut_close"].astype(float)
     df["future_return"] = (df["fut_close"] - df["cur_close"]) / df["cur_close"]
     df["quintile"] = df.groupby(["signal_date", "strategy"])["score"].transform(
         lambda g: pd.qcut(g, 5, labels=False, duplicates="drop")
