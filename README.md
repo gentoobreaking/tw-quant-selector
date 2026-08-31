@@ -138,19 +138,13 @@ FINMIND_TOKEN=your_token_here
 
 > **t w-quant-mcp (T143/T144)**：Dockerfile 第二階段已會自動 build Go 二進位進容器。預設使用 stdio transport；若要改走 streamable-http，調整 `.env` 中 `MCP_TRANSPORT=streamable-http` 與 `MCP_HTTP_ADDR`。
 
-### 2. 啟動基礎設施（PostgreSQL）
+### 2. 啟動基礎設施
 
 ```bash
-docker compose up -d postgres
+docker compose up -d postgres-health
 ```
 
-### 3. 初始化資料庫 Schema
-
-```bash
-docker compose exec postgres psql -U tw-quant -d tw_quant -f /app/init-scripts/001-init-schema.sql
-```
-
-### 4. 啟動 API 後端
+### 3. 啟動 API 後端
 
 ```bash
 docker compose up -d app
@@ -445,11 +439,8 @@ data: {"type": "portfolio_update", "data": null}
 ## Docker
 
 ```bash
-# 啟動服務
-docker compose up -d app frontend postgres
-
-# 初始化資料庫 Schema
-docker compose exec postgres psql -U tw-quant -d tw_quant -f /app/init-scripts/001-init-schema.sql
+# 啟動服務 (uses shared PostgreSQL from tw-quant-db via host.docker.internal)
+docker compose up -d app frontend
 
 # 執行排程（推薦：與 app 分開執行，無鎖衝突）
 docker compose --profile scheduler up -d scheduler
@@ -461,7 +452,6 @@ docker compose --profile scheduler up -d scheduler
 ---
 
 ## 測試
-
 ```bash
 # 執行所有測試
 docker compose exec app pytest
@@ -639,9 +629,9 @@ Pipeline 對每檔股票的 FinMind 攝取都**立即寫 tracker**（在同一 t
 ### 監控狀態
 ```bash
 # 看哪些股票被限流卡住
-docker compose exec postgres psql -U tw-quant -d tw_quant -c \
+docker compose exec app psql -U twquant -d twquant_shared -c \
   "SELECT stock_id, dataset, last_status, last_updated, error_msg
-   FROM ingestion_tracker
+   FROM selector.ingestion_tracker
    WHERE last_status = 'rate_limited'
    ORDER BY last_updated DESC LIMIT 20"
 
@@ -656,7 +646,15 @@ rm /tmp/pipeline_state.json
 ```
 
 ---
+## License
 
-## Apache License 2.0 授權
+本專案採用 **Apache License 2.0** 授權。
+
+- 完整授權條款見 [`LICENSE`](LICENSE)（專案根目錄）
+- Apache-2.0 官方條款：<https://www.apache.org/licenses/LICENSE-2.0>
+- 版權與貢獻者資訊以 LICENSE 檔案為準
+
+> 本專案為研究/模擬用途，授權條款不構成任何投資建議或保證；
+> 使用/修改/再散佈前請詳閱 LICENSE 全文。
 
 本專案僅供個人量化研究與教育用途。資料來源（FinMind、TWSE、TPEX）之使用請遵守各平台之服務條款。
