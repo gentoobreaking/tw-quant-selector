@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 export type WsStatus = 'connecting' | 'connected' | 'disconnected';
 
-const WS_URL = `ws://${location.hostname}:8000/ws/quotes`;
+const WS_URL = `ws://${location.hostname}${location.port ? `:${location.port}` : ''}/ws/quotes`;
 const MAX_RETRIES = 5;
 const BASE_DELAY = 1000;
 
