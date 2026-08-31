@@ -84,3 +84,9 @@ services:
     - -c
     - sh -c 'until pg_isready -h host.docker.internal -p 5432 -U twquant -d twquant_shared; do sleep 5; done'
     restart: "no"
+    networks:
+    - tw-quant-network
+
+networks:
+  tw-quant-network:
+    driver: bridge
